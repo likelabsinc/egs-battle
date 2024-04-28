@@ -1,0 +1,22 @@
+name = "egs-battle"
+main = "src/app.ts"
+compatibility_date = "2023-07-12"
+compatibility_flags = ["durable_object_alarms"]
+
+node_compat = true
+
+kv_namespaces = [
+  
+  { binding = "hiveCache", id = "f717b796c5944b838591ad5fe4484dde", preview_id = "806c3229e5e6467f9f9dbc149abf36a0" },
+  { binding = "userBlacklist", id = "8388b390d3e24ca294cfcd582eb254b5", preview_id = "c3eba08983cb4acc89fce8bf592d4ffc"},
+  
+]
+
+[durable_objects]
+bindings = [
+  { name = "games", class_name = "Game" }
+]
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_classes = ["Game"]
