@@ -4,6 +4,7 @@ export enum StorageKeys {
 	State = 'state',
 	Scores = 'scores',
 	UserContributions = 'user-contributions',
+	Feed = 'feed',
 }
 
 export interface Booster {
@@ -23,4 +24,15 @@ export interface UserScores {
 	guest: {
 		[key: string]: UserContribution;
 	};
+}
+
+export interface FeedItem {
+	username: string | null;
+	body: string;
+	createdAt: Date;
+	textColor: string;
+	usernameColor: string;
+	iconImageUrl: string;
+	iconBackgroundColor: string;
+	iconColor: string;
 }

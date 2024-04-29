@@ -1,5 +1,5 @@
 import { Session } from '@likelabsinc/egs-tools';
-import { Booster, UserContribution } from './types';
+import { Booster, FeedItem, UserContribution } from './types';
 
 export interface State {
 	/**
@@ -21,10 +21,15 @@ export interface State {
 			host: UserContribution[];
 			guest: UserContribution[];
 		};
+		winStreaks: {
+			host: number;
+			guest: number;
+		};
 		booster: Booster | null;
 		endsAt: Date;
 		winner: 'host' | 'guest' | 'draw' | null;
 		isFinished: boolean;
+		feed: FeedItem[];
 	};
 
 	// insert additional properties here
