@@ -1,5 +1,6 @@
 import { Game, Session } from '@likelabsinc/egs-tools';
-import { Booster, FeedItem, UserContribution } from './types';
+import { FeedItem, UserContribution } from './types';
+import { Booster } from './boosters';
 
 interface InboundEvents extends Game.Events.InboundEvents {
 	'debug-send-gift': {

@@ -1,6 +1,6 @@
 import { Env } from './env/env';
 import { DurableObjects } from '@likelabsinc/egs-tools';
-import { Battle } from './games/com.favorited.confess/game';
+import { Battle } from './games/com.favorited.battle/game';
 
 export default DurableObjects.Game.Exported;
 

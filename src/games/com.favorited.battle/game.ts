@@ -61,7 +61,6 @@ export class Battle extends Game<Env, State, Events> {
 	};
 
 	private startDebugBoosterScheduler = () => {
-		console.log('startDebugBoosterScheduler');
 		this.boosterDelayTimer = setTimeout(async () => {
 			const state = await this.state.get();
 
@@ -69,19 +68,12 @@ export class Battle extends Game<Env, State, Events> {
 				if (!this.activeBooster) {
 					this.activeBooster = new DoubleScoreBooster('x2 value', new Date(Date.now() + 30 * 1000));
 
-					console.log('startDebugBoosterScheduler setInterval 5000 !booster');
-
-					this.hostSession?.sendToChannel('update-booster', {
-						title: this.activeBooster.title,
-						endsAt: this.activeBooster.endsAt,
-					});
+					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
 					this.boosterTimer = setTimeout(async () => {
-						console.log('startDebugBoosterScheduler setInterval 30000');
 						const state = await this.state.get();
 
 						if (state.state === 'round') {
-							console.log('startDebugBoosterScheduler setInterval 30000 state.state === round');
 							this.hostSession?.sendToChannel('update-booster', null);
 						}
 
@@ -240,61 +232,71 @@ export class Battle extends Game<Env, State, Events> {
 	}
 
 	protected registerEvents(): void {
-		// this.registerGlobalEvent('system-notification', async (game, data) => {
-		// 	if (data.type != 'gift') {
-		// 		return;
-		// 	}
+		this.registerGlobalEvent('system-notification', async (game, data) => {
+			if (data.type != 'gift') {
+				return;
+			}
 
-		// 	const scores: {
-		// 		host: number;
-		// 		guest: number;
-		// 	} = await this.storage.get(StorageKeys.Scores);
+			/// Setting the type of the body to the type of the gift
+			const body = data.data as Game.SystemNotification.Body['gift'];
 
-		// 	if (data.data.targetHostId == this.hostSession?.user.id) {
-		// 		this.hostSession?.sendToChannel('display-gift', {
-		// 			side: 'host',
-		// 			data: {
-		// 				title: data.data.title,
-		// 				subtitle: data.data.subtitle,
-		// 				image: data.data.image,
-		// 				primaryColor: data.data.primaryColor,
-		// 				secondaryColor: data.data.secondaryColor,
-		// 			},
-		// 		});
-		// 	}
+			const state = await this.state.get();
 
-		// 	if (data.data.targetHostId == this.guestSession?.user.id) {
-		// 		this.guestSession?.sendToChannel('display-gift', {
-		// 			side: 'guest',
-		// 			data: {
-		// 				title: data.data.title,
-		// 				subtitle: data.data.subtitle,
-		// 				image: data.data.image,
-		// 				primaryColor: data.data.primaryColor,
-		// 				secondaryColor: data.data.secondaryColor,
-		// 			},
-		// 		});
-		// 	}
+			/// Checking if the state is in the round
+			if (state.state == 'round') {
+				if ((state.data as State['round']).isFinished) {
+					return;
+				}
+			}
 
-		// 	this.hostSession?.sendToChannel('update-scores', {
-		// 		host: scores.host + data.data.value,
-		// 		guest: scores.guest,
-		// 	});
+			/// Getting the scores from the storage
+			const scores: {
+				host: number;
+				guest: number;
+			} = await this.storage.get(StorageKeys.Scores);
 
-		// 	await this.storage.set(StorageKeys.Scores, {
-		// 		host: scores.host + data.data.value,
-		// 		guest: scores.guest,
-		// 	});
+			/// Getting the value of the gift
+			///
+			/// If there is an active booster, the value of the gift is modified by the modifier function of the active booster
+			const value = this.activeBooster ? this.activeBooster.modifierFunction(body.value) : body.value;
 
-		// 	await this.updateUserContribution(
-		// 		data.data.userId,
-		// 		data.data.value,
-		// 		data.data.targetHostId == this.hostSession?.user.id ? 'host' : 'guest'
-		// 	);
+			/// Checking if the user who sent the gift is the host
+			if (body.livestream.userId == this.hostSession?.user.id) {
+				scores.host += value;
+			}
 
-		// 	this.updateLeaderboard();
-		// });
+			/// Checking if the user who sent the gift is the guest
+			if (body.livestream.userId == this.guestSession?.user.id) {
+				scores.guest += value;
+			}
+
+			this.hostSession?.sendToChannel('update-scores', scores);
+
+			await this.storage.set(StorageKeys.Scores, scores);
+			await this.storage.set(StorageKeys.State, {
+				state: 'round',
+				data: {
+					...(state.data as unknown as State['round']),
+					scores: scores,
+				},
+			});
+
+			/// Updating the user contribution
+			await this.updateUserContribution(body.userId, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
+
+			/// Updating the leaderboard
+			this.updateLeaderboard();
+		});
+
 		/**
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
+		 *
 		 * @event streamer-start - When the streamer starts the game.
 		 */
 		this.registerEvent('debug-send-gift', async (game, session, data) => {
