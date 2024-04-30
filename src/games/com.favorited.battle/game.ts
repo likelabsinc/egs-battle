@@ -185,12 +185,6 @@ export class Battle extends Game<Env, State, Events> {
 				this.buildFeedItem({
 					username: winner === 'draw' ? undefined : winner == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username,
 					body: winner == 'draw' ? 'It`s draw!' : `won this round!`,
-					textColor: '#ffffff',
-					usernameColor: '#cacaca',
-					iconImageUrl:
-						'https://images.ctfassets.net/4nom3kq2w86u/6fvhoZAP725tttEniYh1kj/6fcc6921cfa748a9e0cd21765672e02f/water-bottle.png',
-					iconBackgroundColor: '#BEBEBE',
-					iconColor: '#ffffff',
 				})
 			);
 		}, kRoundDuration);
@@ -210,18 +204,10 @@ export class Battle extends Game<Env, State, Events> {
 		});
 	}
 
-	private buildFeedItem(data: {
-		username: string | undefined;
-		body: string;
-		textColor: string | undefined;
-		usernameColor: string | undefined;
-		iconImageUrl: string | undefined;
-		iconBackgroundColor: string | undefined;
-		iconColor: string | undefined;
-	}): FeedItem {
+	private buildFeedItem(data: Partial<FeedItem>): FeedItem {
 		return {
 			username: data.username ?? null,
-			body: data.body,
+			body: data.body ?? '',
 			createdAt: new Date(),
 			textColor: data.textColor ?? '#ffffff',
 			usernameColor: data.usernameColor ?? '#cacaca',
@@ -286,6 +272,13 @@ export class Battle extends Game<Env, State, Events> {
 
 			/// Updating the leaderboard
 			this.updateLeaderboard();
+
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: body.user.username,
+					body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
+				})
+			);
 		});
 
 		/**

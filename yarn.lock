@@ -162,10 +162,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.16.3.tgz#94047dae921949cfb308117d993c4b941291ae10"
   integrity sha512-5/JuTd8OWW8UzEtyf19fbrtMJENza+C9JoPIkvItgTBQ1FO2ZLvjbPO6Xs54vk0s5JB5QsfieUEshRQfu7ZHow==
 
-"@likelabsinc/egs-tools@0.1.23":
-  version "0.1.23"
-  resolved "https://npm.pkg.github.com/download/@likelabsinc/egs-tools/0.1.23/c808c3196d4bf6055fb7efe13b617d4786619dbb#c808c3196d4bf6055fb7efe13b617d4786619dbb"
-  integrity sha512-rlahLuA0Fu3Ybfkk5anm7fZDbZ6QXejquV31o6iJE/3ZIDWkV3OJLxM1mlKAWxXqSdvB2b1HgWKodiS4iZTGYw==
+"@likelabsinc/egs-tools@0.1.24":
+  version "0.1.24"
+  resolved "https://npm.pkg.github.com/download/@likelabsinc/egs-tools/0.1.24/7b2e15d172e6943fdcfca51815ad613976099de3#7b2e15d172e6943fdcfca51815ad613976099de3"
+  integrity sha512-ToAM/dq9u+UCVyeUHrs03RjtSq7Q5UQSjxPNdW6+uG5nAQdjNtM/pnm5CjsijBIQgsAODw77O/sVezZvxUKZ2w==
   dependencies:
     jsonwebtoken "^9.0.2"
     uuid "^9.0.1"
