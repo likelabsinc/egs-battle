@@ -7,11 +7,6 @@ export enum StorageKeys {
 	Feed = 'feed',
 }
 
-export interface Booster {
-	title: string;
-	endsAt: Date;
-}
-
 export interface UserContribution {
 	user: Session.User;
 	score: number;

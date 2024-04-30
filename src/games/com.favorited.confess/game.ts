@@ -3,7 +3,8 @@ import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
 import { Moderation } from '../../../services/moderation/moderation';
-import { Booster, FeedItem, StorageKeys, UserScores } from './lib/types';
+import { FeedItem, StorageKeys, UserScores } from './lib/types';
+import { Booster, DoubleScoreBooster } from './lib/boosters';
 
 const kRoundDuration = 10 * 1000;
 const kVictoryLapDuration = 12 * 1000;
@@ -11,6 +12,11 @@ const kVictoryLapDuration = 12 * 1000;
 export class Battle extends Game<Env, State, Events> {
 	private hostSession: Session<Events> | null = null;
 	private guestSession: Session<Events> | null = null;
+
+	private boosterTimer: number | null = null;
+	private boosterDelayTimer: number | null = null;
+
+	private activeBooster: Booster | null = null;
 
 	private winStreaks: {
 		host: number;
@@ -56,21 +62,21 @@ export class Battle extends Game<Env, State, Events> {
 
 	private startDebugBoosterScheduler = () => {
 		console.log('startDebugBoosterScheduler');
-		setTimeout(async () => {
+		this.boosterDelayTimer = setTimeout(async () => {
 			const state = await this.state.get();
 
 			if (state.state === 'round') {
-				const booster = (state as unknown as State['round']).booster;
+				if (!this.activeBooster) {
+					this.activeBooster = new DoubleScoreBooster('x2 value', new Date(Date.now() + 30 * 1000));
 
-				if (!booster) {
 					console.log('startDebugBoosterScheduler setInterval 5000 !booster');
 
 					this.hostSession?.sendToChannel('update-booster', {
-						title: 'x2 value',
-						endsAt: new Date(Date.now() + 30 * 1000),
+						title: this.activeBooster.title,
+						endsAt: this.activeBooster.endsAt,
 					});
 
-					setTimeout(async () => {
+					this.boosterTimer = setTimeout(async () => {
 						console.log('startDebugBoosterScheduler setInterval 30000');
 						const state = await this.state.get();
 
@@ -309,6 +315,8 @@ export class Battle extends Game<Env, State, Events> {
 				guest: number;
 			} = await this.storage.get(StorageKeys.Scores);
 
+			const value = this.activeBooster ? this.activeBooster.modifierFunction(data.data.value) : data.data.value;
+
 			if (data.data.targetHostId == this.hostSession?.user.id) {
 				this.hostSession?.sendToChannel('display-gift', {
 					side: 'host',
@@ -321,7 +329,7 @@ export class Battle extends Game<Env, State, Events> {
 					},
 				});
 
-				scores.host += data.data.value;
+				scores.host += value;
 			}
 
 			if (data.data.targetHostId == this.guestSession?.user.id) {
@@ -336,7 +344,7 @@ export class Battle extends Game<Env, State, Events> {
 					},
 				});
 
-				scores.guest += data.data.value;
+				scores.guest += value;
 			}
 
 			this.hostSession?.sendToChannel('update-scores', scores);
@@ -350,11 +358,7 @@ export class Battle extends Game<Env, State, Events> {
 				},
 			});
 
-			await this.updateUserContribution(
-				data.data.userId,
-				data.data.value,
-				data.data.targetHostId == this.hostSession?.user.id ? 'host' : 'guest'
-			);
+			await this.updateUserContribution(data.data.userId, value, data.data.targetHostId == this.hostSession?.user.id ? 'host' : 'guest');
 
 			this.updateLeaderboard();
 		});
@@ -388,6 +392,11 @@ export class Battle extends Game<Env, State, Events> {
 			this.storage.delete(StorageKeys.Scores);
 			this.storage.delete(StorageKeys.UserContributions);
 
+			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
+			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
+
+			this.activeBooster = null;
+
 			this.startGame();
 		});
 
@@ -398,6 +407,11 @@ export class Battle extends Game<Env, State, Events> {
 			if (!session.isStreamer) return;
 
 			await this.dispose();
+
+			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
+			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
+
+			this.activeBooster = null;
 		});
 
 		/**
@@ -407,6 +421,11 @@ export class Battle extends Game<Env, State, Events> {
 			if (!session.isStreamer) return;
 
 			await this.dispose();
+
+			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
+			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
+
+			this.activeBooster = null;
 		});
 	}
 
@@ -439,12 +458,4 @@ export class Battle extends Game<Env, State, Events> {
 			session.send('set-state', state.toJson());
 		}
 	}
-}
-
-function v4() {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-		var r = (Math.random() * 16) | 0,
-			v = c == 'x' ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
 }

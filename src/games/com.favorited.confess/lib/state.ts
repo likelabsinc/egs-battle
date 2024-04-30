@@ -1,5 +1,6 @@
 import { Session } from '@likelabsinc/egs-tools';
-import { Booster, FeedItem, UserContribution } from './types';
+import { FeedItem, UserContribution } from './types';
+import { Booster } from './boosters';
 
 export interface State {
 	/**
