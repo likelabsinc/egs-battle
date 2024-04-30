@@ -1,12 +1,11 @@
-import { ChatAction, Game, Session } from '@likelabsinc/egs-tools';
+import { Game, Session } from '@likelabsinc/egs-tools';
 import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
-import { Moderation } from '../../../services/moderation/moderation';
 import { FeedItem, StorageKeys, UserScores } from './lib/types';
 import { Booster, DoubleScoreBooster } from './lib/boosters';
 
-const kRoundDuration = 10 * 1000;
+const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 
 export class Battle extends Game<Env, State, Events> {
@@ -60,13 +59,14 @@ export class Battle extends Game<Env, State, Events> {
 		}
 	};
 
-	private startDebugBoosterScheduler = () => {
+	/// Debug method to start the booster
+	private scheduleBooster = () => {
 		this.boosterDelayTimer = setTimeout(async () => {
 			const state = await this.state.get();
 
 			if (state.state === 'round') {
 				if (!this.activeBooster) {
-					this.activeBooster = new DoubleScoreBooster('x2 value', new Date(Date.now() + 30 * 1000));
+					this.activeBooster = new DoubleScoreBooster('x2 value', new Date(Date.now() + 15 * 1000));
 
 					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
@@ -77,13 +77,14 @@ export class Battle extends Game<Env, State, Events> {
 							this.hostSession?.sendToChannel('update-booster', null);
 						}
 
-						this.startDebugBoosterScheduler();
-					}, 30000);
+						this.disposeBooster();
+					}, 15000);
 				}
 			}
-		}, 5000);
-	};
+		}, kRoundDuration - 30000);
+	};  
 
+	/// Updating the user contribution
 	private updateUserContribution = async (userId: string, value: number, side: 'host' | 'guest') => {
 		const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
 
@@ -99,6 +100,7 @@ export class Battle extends Game<Env, State, Events> {
 		await this.storage.set(StorageKeys.UserContributions, userContributions);
 	};
 
+	/// Getting the win streaks
 	private getStreaks = async () => {
 		if (!this.hostSession || !this.guestSession) {
 			return {
@@ -116,16 +118,14 @@ export class Battle extends Game<Env, State, Events> {
 		};
 	};
 
-	private getUserById = (userId: string) => {
-		const user = this.connectedSessions.find((session) => session.user.id == userId)?.user;
+	/// Getting the user by the user id
+	private getUserById = (userId: string) => this.connectedSessions.find((session) => session.user.id == userId)?.user;
 
-		return user;
-	};
-
+	/// Start the game
 	private startGame = async () => {
 		this.winStreaks = await this.getStreaks();
 
-		this.startDebugBoosterScheduler();
+		this.scheduleBooster();
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
@@ -382,15 +382,12 @@ export class Battle extends Game<Env, State, Events> {
 		this.registerEvent('streamer-restart', async (game, session) => {
 			if (!session.isStreamer) return;
 
+			this.disposeBooster();
+
 			this.storage.cancelAlarm();
 
 			this.storage.delete(StorageKeys.Scores);
 			this.storage.delete(StorageKeys.UserContributions);
-
-			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
-			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
-
-			this.activeBooster = null;
 
 			this.startGame();
 		});
@@ -403,10 +400,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
-			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
-			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
-
-			this.activeBooster = null;
+			this.disposeBooster();
 		});
 
 		/**
@@ -417,11 +411,15 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
-			if (this.boosterTimer) clearTimeout(this.boosterTimer!);
-			if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
-
-			this.activeBooster = null;
+			this.disposeBooster();
 		});
+	}
+
+	private async disposeBooster() {
+		if (this.boosterTimer) clearTimeout(this.boosterTimer!);
+		if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
+
+		this.activeBooster = null;
 	}
 
 	/**
