@@ -70,11 +70,27 @@ export class Battle extends Game<Env, State, Events> {
 
 					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
+					await this.storage.set('state', {
+						state: 'round',
+						data: {
+							...(state.data as unknown as State['round']),
+							booster: this.activeBooster,
+						},
+					});
+
 					this.boosterTimer = setTimeout(async () => {
 						const state = await this.state.get();
 
 						if (state.state === 'round') {
 							this.hostSession?.sendToChannel('update-booster', null);
+
+							await this.storage.set('state', {
+								state: 'round',
+								data: {
+									...(state.data as unknown as State['round']),
+									booster: null,
+								},
+							});
 						}
 
 						this.disposeBooster();
