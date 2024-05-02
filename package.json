@@ -12,6 +12,6 @@
 		"wrangler": "^3.5.1"
 	},
 	"dependencies": {
-		"@likelabsinc/egs-tools": "0.1.24"
+		"@likelabsinc/egs-tools": "0.1.25"
 	}
 }
