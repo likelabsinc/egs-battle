@@ -82,7 +82,7 @@ export class Battle extends Game<Env, State, Events> {
 				}
 			}
 		}, kRoundDuration - 30000);
-	};  
+	};
 
 	/// Updating the user contribution
 	private updateUserContribution = async (userId: string, value: number, side: 'host' | 'guest') => {
@@ -268,7 +268,7 @@ export class Battle extends Game<Env, State, Events> {
 			});
 
 			/// Updating the user contribution
-			await this.updateUserContribution(body.userId, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
+			await this.updateUserContribution(body.user.id, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
 
 			/// Updating the leaderboard
 			this.updateLeaderboard();
