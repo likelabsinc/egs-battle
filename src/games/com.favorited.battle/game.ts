@@ -270,15 +270,15 @@ export class Battle extends Game<Env, State, Events> {
 			/// Updating the user contribution
 			await this.updateUserContribution(body.user.id, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
 
-			/// Updating the leaderboard
-			this.updateLeaderboard();
-
-			this.addFeedItem(
+			await this.addFeedItem(
 				this.buildFeedItem({
 					username: body.user.username,
 					body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
 				})
 			);
+
+			/// Updating the leaderboard
+			await this.updateLeaderboard();
 		});
 
 		/**
