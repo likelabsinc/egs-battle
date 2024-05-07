@@ -156,7 +156,7 @@ export class Battle extends Game<Env, State, Events> {
 					booster: new TripleScoreBooster('x3 lol'),
 				},
 			});
-		});
+		}, 5000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
