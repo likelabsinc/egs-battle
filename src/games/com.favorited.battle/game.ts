@@ -2,7 +2,7 @@ import { Game, Session } from '@likelabsinc/egs-tools';
 import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
-import { FeedItem, StorageKeys, UserScores } from './lib/types';
+import { FeedItem, StorageKeys, Target, UserScores } from './lib/types';
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 
 const kRoundDuration = 45 * 1000;
@@ -70,7 +70,7 @@ export class Battle extends Game<Env, State, Events> {
 
 					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
-					this.updateState('round', {
+					this.updateStateLocally('round', {
 						booster: this.activeBooster,
 					});
 
@@ -80,7 +80,7 @@ export class Battle extends Game<Env, State, Events> {
 						if (state.state === 'round') {
 							this.hostSession?.sendToChannel('update-booster', null);
 
-							this.updateState('round', {
+							this.updateStateLocally('round', {
 								booster: null,
 							});
 						}
@@ -92,15 +92,26 @@ export class Battle extends Game<Env, State, Events> {
 		}, kRoundDuration - 30000);
 	};
 
-	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>) {
+	private async updateStateLocally<T extends keyof State>(state: T, data: Partial<State[T]>) {
 		const currentState = await this.state.get();
 
 		if (currentState.state === state) {
-			await this.storage.set(state, {
-				...(currentState.data as unknown as State[T]),
-				...data,
+			await this.storage.set('state', {
+				state: state,
+				data: {
+					...(currentState.data as unknown as State[T]),
+					...data,
+				},
 			});
+		} else {
+			console.log('state is not', state);
 		}
+	}
+
+	private async syncState() {
+		const state = await this.state.get();
+
+		this.hostSession?.sendToChannel('set-state', state.toJson());
 	}
 
 	/// Updating the user contribution
@@ -137,6 +148,18 @@ export class Battle extends Game<Env, State, Events> {
 		};
 	};
 
+	private setTarget = async (target: Target) => {
+		await this.updateStateLocally('round', {
+			target,
+		}).then(() => this.syncState());
+
+		setTimeout(async () => {
+			this.updateStateLocally('round', {
+				target: null,
+			}).then(() => this.syncState());
+		}, target.endsAt.getTime() - Date.now());
+	};
+
 	/// Getting the user by the user id
 	private getUserById = (userId: string) => this.connectedSessions.find((session) => session.user.id == userId)?.user;
 
@@ -146,15 +169,13 @@ export class Battle extends Game<Env, State, Events> {
 
 		this.scheduleBooster();
 
-		setTimeout(() => {
-			this.updateState('round', {
-				target: {
-					currentValue: 0,
-					targetScore: 100,
-					title: 'Target',
-					endsAt: new Date(Date.now() + 30000),
-					booster: new TripleScoreBooster('x3 lol'),
-				},
+		setTimeout(async () => {
+			this.setTarget({
+				title: 'reach 1000, get x3',
+				targetScore: 1000,
+				currentValue: 0,
+				endsAt: new Date(Date.now() + 10000),
+				booster: new TripleScoreBooster('x3 value'),
 			});
 		}, 5000);
 
@@ -237,12 +258,12 @@ export class Battle extends Game<Env, State, Events> {
 			this.activeBooster = target.booster;
 			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
 
-			await this.updateState('round', {
+			await this.updateStateLocally('round', {
 				target: null,
 				booster: this.activeBooster,
 			});
 		} else {
-			await this.updateState('round', {
+			await this.updateStateLocally('round', {
 				target: target,
 			});
 		}
@@ -321,7 +342,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.storage.set(StorageKeys.Scores, scores);
 
-			this.updateState('round', {
+			this.updateStateLocally('round', {
 				scores: scores,
 			});
 
