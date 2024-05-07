@@ -172,7 +172,7 @@ export class Battle extends Game<Env, State, Events> {
 		setTimeout(async () => {
 			this.setTarget({
 				title: 'reach 1000, get x3',
-				targetScore: 1000,
+				targetScore: 30,
 				currentValue: 0,
 				endsAt: new Date(Date.now() + 10000),
 				booster: new TripleScoreBooster('x3 value'),
@@ -254,6 +254,8 @@ export class Battle extends Game<Env, State, Events> {
 
 		target.currentValue += valueContributed;
 
+		console.log(target.currentValue, target.targetScore, target.currentValue >= target.targetScore);
+
 		if (target.currentValue >= target.targetScore) {
 			this.activeBooster = target.booster;
 			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
@@ -261,11 +263,11 @@ export class Battle extends Game<Env, State, Events> {
 			await this.updateStateLocally('round', {
 				target: null,
 				booster: this.activeBooster,
-			});
+			}).then(() => this.syncState());
 		} else {
 			await this.updateStateLocally('round', {
 				target: target,
-			});
+			}).then(() => this.syncState());
 		}
 	}
 
@@ -335,9 +337,6 @@ export class Battle extends Game<Env, State, Events> {
 				scores.guest += value;
 			}
 
-			if ((state.data as State['round']).target) {
-			}
-
 			this.hostSession?.sendToChannel('update-scores', scores);
 
 			await this.storage.set(StorageKeys.Scores, scores);
@@ -359,7 +358,9 @@ export class Battle extends Game<Env, State, Events> {
 			/// Updating the leaderboard
 			await this.updateLeaderboard();
 
-			this.handleTargetUpdates(value);
+			if ((state.data as State['round']).target) {
+				await this.handleTargetUpdates(value);
+			}
 		});
 
 		/**
@@ -436,7 +437,11 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.updateUserContribution(data.data.userId, value, data.data.targetHostId == this.hostSession?.user.id ? 'host' : 'guest');
 
-			this.updateLeaderboard();
+			await this.updateLeaderboard();
+
+			if ((state.data as State['round']).target) {
+				await this.handleTargetUpdates(value);
+			}
 		});
 
 		this.registerEvent('accept-invite', async (game, session) => {
