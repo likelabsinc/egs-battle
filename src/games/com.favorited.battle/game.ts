@@ -172,7 +172,7 @@ export class Battle extends Game<Env, State, Events> {
 		setTimeout(async () => {
 			this.setTarget({
 				title: 'reach 1000, get x3',
-				targetScore: 30,
+				targetValue: 30,
 				currentValue: 0,
 				endsAt: new Date(Date.now() + 10000),
 				booster: new TripleScoreBooster('x3 value'),
@@ -254,9 +254,7 @@ export class Battle extends Game<Env, State, Events> {
 
 		target.currentValue += valueContributed;
 
-		console.log(target.currentValue, target.targetScore, target.currentValue >= target.targetScore);
-
-		if (target.currentValue >= target.targetScore) {
+		if (target.currentValue >= target.targetValue) {
 			this.activeBooster = target.booster;
 			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
 

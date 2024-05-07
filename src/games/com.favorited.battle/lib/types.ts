@@ -40,7 +40,7 @@ export interface Target {
 
 	/// amount of points the users need to contribute to
 	/// reach the target and activate booster
-	targetScore: number;
+	targetValue: number;
 
 	/// text label for the target
 	title: string;

@@ -42,6 +42,10 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 			secondaryColor: string;
 		};
 	};
+	'announce-target': {
+		title: string;
+		subtitle: string;
+	};
 }
 
 export type Events = Game.Events<InboundEvents, OutboundEvents>;
