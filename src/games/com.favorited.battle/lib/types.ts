@@ -1,4 +1,5 @@
 import { Session } from '@likelabsinc/egs-tools';
+import { Booster } from './boosters';
 
 export enum StorageKeys {
 	State = 'state',
@@ -30,4 +31,23 @@ export interface FeedItem {
 	iconImageUrl: string;
 	iconBackgroundColor: string;
 	iconColor: string;
+}
+
+export interface Target {
+	/// amount of points the users already have contributed
+	/// for this target
+	currentValue: number;
+
+	/// amount of points the users need to contribute to
+	/// reach the target and activate booster
+	targetScore: number;
+
+	/// text label for the target
+	title: string;
+
+	/// date when target ends, if not reached - booster will not be activated
+	endsAt: Date;
+
+	/// booster that will be activated when the target is reached
+	booster: Booster;
 }

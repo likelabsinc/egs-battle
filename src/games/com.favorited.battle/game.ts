@@ -3,7 +3,7 @@ import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
 import { FeedItem, StorageKeys, UserScores } from './lib/types';
-import { Booster, DoubleScoreBooster } from './lib/boosters';
+import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 
 const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
@@ -66,16 +66,12 @@ export class Battle extends Game<Env, State, Events> {
 
 			if (state.state === 'round') {
 				if (!this.activeBooster) {
-					this.activeBooster = new DoubleScoreBooster('x2 value', new Date(Date.now() + 15 * 1000));
+					this.activeBooster = new DoubleScoreBooster('x2 value');
 
 					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
-					await this.storage.set('state', {
-						state: 'round',
-						data: {
-							...(state.data as unknown as State['round']),
-							booster: this.activeBooster,
-						},
+					this.updateState('round', {
+						booster: this.activeBooster,
 					});
 
 					this.boosterTimer = setTimeout(async () => {
@@ -84,12 +80,8 @@ export class Battle extends Game<Env, State, Events> {
 						if (state.state === 'round') {
 							this.hostSession?.sendToChannel('update-booster', null);
 
-							await this.storage.set('state', {
-								state: 'round',
-								data: {
-									...(state.data as unknown as State['round']),
-									booster: null,
-								},
+							this.updateState('round', {
+								booster: null,
 							});
 						}
 
@@ -99,6 +91,17 @@ export class Battle extends Game<Env, State, Events> {
 			}
 		}, kRoundDuration - 30000);
 	};
+
+	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>) {
+		const currentState = await this.state.get();
+
+		if (currentState.state === state) {
+			await this.storage.set(state, {
+				...(currentState.data as unknown as State[T]),
+				...data,
+			});
+		}
+	}
 
 	/// Updating the user contribution
 	private updateUserContribution = async (userId: string, value: number, side: 'host' | 'guest') => {
@@ -143,6 +146,18 @@ export class Battle extends Game<Env, State, Events> {
 
 		this.scheduleBooster();
 
+		setTimeout(() => {
+			this.updateState('round', {
+				target: {
+					currentValue: 0,
+					targetScore: 100,
+					title: 'Target',
+					endsAt: new Date(Date.now() + 30000),
+					booster: new TripleScoreBooster('x3 lol'),
+				},
+			});
+		});
+
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
 
@@ -162,6 +177,7 @@ export class Battle extends Game<Env, State, Events> {
 				host: [],
 				guest: [],
 			},
+			target: null,
 			booster: null,
 			endsAt: new Date(Date.now() + kRoundDuration),
 			winner: null,
@@ -205,6 +221,32 @@ export class Battle extends Game<Env, State, Events> {
 			);
 		}, kRoundDuration);
 	};
+
+	private async handleTargetUpdates(valueContributed: number) {
+		const state = await this.state.get();
+
+		if (state.state !== 'round') {
+			return;
+		}
+
+		const target = (state.data as State['round']).target!;
+
+		target.currentValue += valueContributed;
+
+		if (target.currentValue >= target.targetScore) {
+			this.activeBooster = target.booster;
+			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
+
+			await this.updateState('round', {
+				target: null,
+				booster: this.activeBooster,
+			});
+		} else {
+			await this.updateState('round', {
+				target: target,
+			});
+		}
+	}
 
 	private async addFeedItem(item: FeedItem) {
 		const state = await this.state.get();
@@ -272,15 +314,15 @@ export class Battle extends Game<Env, State, Events> {
 				scores.guest += value;
 			}
 
+			if ((state.data as State['round']).target) {
+			}
+
 			this.hostSession?.sendToChannel('update-scores', scores);
 
 			await this.storage.set(StorageKeys.Scores, scores);
-			await this.storage.set(StorageKeys.State, {
-				state: 'round',
-				data: {
-					...(state.data as unknown as State['round']),
-					scores: scores,
-				},
+
+			this.updateState('round', {
+				scores: scores,
 			});
 
 			/// Updating the user contribution
@@ -295,6 +337,8 @@ export class Battle extends Game<Env, State, Events> {
 
 			/// Updating the leaderboard
 			await this.updateLeaderboard();
+
+			this.handleTargetUpdates(value);
 		});
 
 		/**
