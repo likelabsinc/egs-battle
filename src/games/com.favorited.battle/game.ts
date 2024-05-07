@@ -2,7 +2,7 @@ import { Game, Session } from '@likelabsinc/egs-tools';
 import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
-import { FeedItem, StorageKeys, Target, UserScores } from './lib/types';
+import { FeedItem, StorageKeys, Target, TargetType, UserScores } from './lib/types';
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 
 const kRoundDuration = 45 * 1000;
@@ -176,6 +176,7 @@ export class Battle extends Game<Env, State, Events> {
 				currentValue: 0,
 				endsAt: new Date(Date.now() + 10000),
 				booster: new TripleScoreBooster('x3 value'),
+				type: TargetType.score,
 			});
 		}, 5000);
 
@@ -243,7 +244,7 @@ export class Battle extends Game<Env, State, Events> {
 		}, kRoundDuration);
 	};
 
-	private async handleTargetUpdates(valueContributed: number) {
+	private async handleTargetUpdates(user: Session.User | Game.SystemNotification.User, valueContributed: number) {
 		const state = await this.state.get();
 
 		if (state.state !== 'round') {
@@ -252,7 +253,22 @@ export class Battle extends Game<Env, State, Events> {
 
 		const target = (state.data as State['round']).target!;
 
-		target.currentValue += valueContributed;
+		switch (target.type) {
+			case TargetType.score:
+				target.currentValue += valueContributed;
+
+				break;
+			case TargetType.uniqueUsers:
+				const usersContributed: string[] = (await this.storage.get('target-users-contributed')) ?? [];
+
+				if (!usersContributed.includes(user.id)) {
+					target.currentValue += 1;
+				} else {
+					return;
+				}
+
+				break;
+		}
 
 		if (target.currentValue >= target.targetValue) {
 			this.activeBooster = target.booster;
@@ -357,7 +373,7 @@ export class Battle extends Game<Env, State, Events> {
 			await this.updateLeaderboard();
 
 			if ((state.data as State['round']).target) {
-				await this.handleTargetUpdates(value);
+				await this.handleTargetUpdates(body.user, value);
 			}
 		});
 
@@ -438,7 +454,7 @@ export class Battle extends Game<Env, State, Events> {
 			await this.updateLeaderboard();
 
 			if ((state.data as State['round']).target) {
-				await this.handleTargetUpdates(value);
+				await this.handleTargetUpdates(this.getUserById(data.data.userId)!, value);
 			}
 		});
 

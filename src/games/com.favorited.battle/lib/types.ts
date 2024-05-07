@@ -50,4 +50,12 @@ export interface Target {
 
 	/// booster that will be activated when the target is reached
 	booster: Booster;
+
+	/// target type
+	type: TargetType;
+}
+
+export enum TargetType {
+	score = 'score',
+	uniqueUsers = 'uniqueUsers',
 }
