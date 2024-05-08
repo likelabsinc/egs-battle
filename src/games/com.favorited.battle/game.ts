@@ -285,6 +285,7 @@ export class Battle extends Game<Env, State, Events> {
 				'round',
 				{
 					target,
+					announcement: null,
 				},
 				true
 			);
