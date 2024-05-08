@@ -174,6 +174,7 @@ export class Battle extends Game<Env, State, Events> {
 			},
 			target: null,
 			booster: null,
+			announcement: null,
 			endsAt: new Date(Date.now() + kRoundDuration),
 			winner: null,
 			isFinished: false,
@@ -270,6 +271,13 @@ export class Battle extends Game<Env, State, Events> {
 			trailingText: '10s',
 		});
 
+		this.updateState('round', {
+			announcement: {
+				text: target.title,
+				trailingText: '10s',
+			},
+		});
+
 		target.endsAt = new Date(target.endsAt.getTime() + kTargetAnnouncementDelay);
 
 		setTimeout(async () => {
@@ -289,6 +297,8 @@ export class Battle extends Game<Env, State, Events> {
 					},
 					true
 				);
+
+				await this.storage.set('target-users-contributed', []);
 			}, target.endsAt.getTime() - Date.now());
 		}, kTargetAnnouncementDelay);
 	}
