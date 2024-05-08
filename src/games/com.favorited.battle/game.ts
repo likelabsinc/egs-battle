@@ -144,12 +144,12 @@ export class Battle extends Game<Env, State, Events> {
 
 		setTimeout(async () => {
 			this.createTarget({
-				title: 'reach 1000, get x3',
-				targetValue: 30,
+				title: 'reach 2, get x3',
+				targetValue: 2,
 				currentValue: 0,
 				endsAt: new Date(Date.now() + 10000),
 				booster: new TripleScoreBooster('x3 value'),
-				type: TargetType.score,
+				type: TargetType.uniqueUsers,
 			});
 		}, 5000);
 
