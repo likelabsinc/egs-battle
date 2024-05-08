@@ -267,7 +267,7 @@ export class Battle extends Game<Env, State, Events> {
 			trailingText: '10s',
 		});
 
-		target.endsAt = new Date(Date.now() + kTargetAnnouncementDelay);
+		target.endsAt = new Date(target.endsAt.getTime() + kTargetAnnouncementDelay);
 
 		setTimeout(async () => {
 			await this.updateState(
