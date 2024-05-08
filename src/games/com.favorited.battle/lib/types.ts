@@ -59,3 +59,11 @@ export enum TargetType {
 	score = 'score',
 	uniqueUsers = 'uniqueUsers',
 }
+
+export interface Announcement {
+	text: string;
+	backgroundColor?: string;
+	textColor?: string;
+	trailingText?: string;
+	trailingTextColor?: string;
+}

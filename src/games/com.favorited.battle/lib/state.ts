@@ -1,5 +1,5 @@
 import { Session } from '@likelabsinc/egs-tools';
-import { FeedItem, Target, UserContribution } from './types';
+import { Announcement, FeedItem, Target, UserContribution } from './types';
 import { Booster } from './boosters';
 
 export interface State {
@@ -28,6 +28,7 @@ export interface State {
 		};
 		target: Target | null;
 		booster: Booster | null;
+		announcement: Announcement | null;
 		endsAt: Date;
 		winner: 'host' | 'guest' | 'draw' | null;
 		isFinished: boolean;

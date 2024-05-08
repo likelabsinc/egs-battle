@@ -1,5 +1,5 @@
 import { Game, Session } from '@likelabsinc/egs-tools';
-import { FeedItem, UserContribution } from './types';
+import { Announcement, FeedItem, UserContribution } from './types';
 import { Booster } from './boosters';
 
 interface InboundEvents extends Game.Events.InboundEvents {
@@ -48,13 +48,7 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 	// final String? trailingText;
 	// final String? trailingTextColor;
 
-	'announce-target': {
-		text: string;
-		backgroundColor?: string;
-		textColor?: string;
-		trailingText?: string;
-		trailingTextColor?: string;
-	};
+	'announce-target': Announcement;
 }
 
 export type Events = Game.Events<InboundEvents, OutboundEvents>;
