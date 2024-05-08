@@ -238,6 +238,9 @@ export class Battle extends Game<Env, State, Events> {
 				const usersContributed: string[] = (await this.storage.get('target-users-contributed')) ?? [];
 
 				if (!usersContributed.includes(user.id)) {
+					usersContributed.push(user.id);
+					await this.storage.set('target-users-contributed', usersContributed);
+
 					target.currentValue += 1;
 				} else {
 					return;
