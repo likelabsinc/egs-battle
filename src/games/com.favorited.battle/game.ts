@@ -7,6 +7,7 @@ import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters'
 
 const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
+const kTargetAnnouncementDelay = 5 * 1000;
 
 export class Battle extends Game<Env, State, Events> {
 	private hostSession: Session<Events> | null = null;
@@ -25,38 +26,19 @@ export class Battle extends Game<Env, State, Events> {
 		guest: 0,
 	};
 
-	private updateLeaderboard = async () => {
-		try {
-			const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
-			const hostLeaderboard = Object.values(userContributions.host)
-				.sort((a, b) => b.score - a.score)
-				.splice(0, 3);
-			const guestLeaderboard = Object.values(userContributions.guest)
-				.sort((a, b) => b.score - a.score)
-				.splice(0, 3);
+	private getLeaderboard = async () => {
+		const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
+		const hostLeaderboard = Object.values(userContributions.host)
+			.sort((a, b) => b.score - a.score)
+			.splice(0, 3);
+		const guestLeaderboard = Object.values(userContributions.guest)
+			.sort((a, b) => b.score - a.score)
+			.splice(0, 3);
 
-			const state = await this.state.get();
-
-			if (state.state === 'round') {
-				await this.storage.set(StorageKeys.State, {
-					state: 'round',
-					data: {
-						...(state.data as unknown as State['round']),
-						leaderboard: {
-							host: hostLeaderboard,
-							guest: guestLeaderboard,
-						},
-					},
-				});
-
-				this.hostSession?.sendToChannel('update-leaderboard', {
-					host: hostLeaderboard,
-					guest: guestLeaderboard,
-				});
-			}
-		} catch (e) {
-			console.error(e);
-		}
+		return {
+			host: hostLeaderboard,
+			guest: guestLeaderboard,
+		};
 	};
 
 	/// Debug method to start the booster
@@ -70,7 +52,7 @@ export class Battle extends Game<Env, State, Events> {
 
 					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
 
-					this.updateStateLocally('round', {
+					this.updateState('round', {
 						booster: this.activeBooster,
 					});
 
@@ -80,7 +62,7 @@ export class Battle extends Game<Env, State, Events> {
 						if (state.state === 'round') {
 							this.hostSession?.sendToChannel('update-booster', null);
 
-							this.updateStateLocally('round', {
+							this.updateState('round', {
 								booster: null,
 							});
 						}
@@ -92,7 +74,7 @@ export class Battle extends Game<Env, State, Events> {
 		}, kRoundDuration - 30000);
 	};
 
-	private async updateStateLocally<T extends keyof State>(state: T, data: Partial<State[T]>) {
+	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>, sync = false) {
 		const currentState = await this.state.get();
 
 		if (currentState.state === state) {
@@ -103,6 +85,10 @@ export class Battle extends Game<Env, State, Events> {
 					...data,
 				},
 			});
+
+			if (sync) {
+				this.syncState();
+			}
 		} else {
 			console.log('state is not', state);
 		}
@@ -147,19 +133,6 @@ export class Battle extends Game<Env, State, Events> {
 			guest: guestStreak ? parseInt(guestStreak) : 0,
 		};
 	};
-
-	private setTarget = async (target: Target) => {
-		await this.updateStateLocally('round', {
-			target,
-		}).then(() => this.syncState());
-
-		setTimeout(async () => {
-			this.updateStateLocally('round', {
-				target: null,
-			}).then(() => this.syncState());
-		}, target.endsAt.getTime() - Date.now());
-	};
-
 	/// Getting the user by the user id
 	private getUserById = (userId: string) => this.connectedSessions.find((session) => session.user.id == userId)?.user;
 
@@ -170,7 +143,7 @@ export class Battle extends Game<Env, State, Events> {
 		this.scheduleBooster();
 
 		setTimeout(async () => {
-			this.setTarget({
+			this.createTarget({
 				title: 'reach 1000, get x3',
 				targetValue: 30,
 				currentValue: 0,
@@ -244,7 +217,10 @@ export class Battle extends Game<Env, State, Events> {
 		}, kRoundDuration);
 	};
 
-	private async handleTargetUpdates(user: Session.User | Game.SystemNotification.User, valueContributed: number) {
+	private async handleTargetUpdates(
+		user: Session.User | Game.SystemNotification.User,
+		valueContributed: number
+	): Promise<Partial<State['round']> | undefined> {
 		const state = await this.state.get();
 
 		if (state.state !== 'round') {
@@ -274,15 +250,42 @@ export class Battle extends Game<Env, State, Events> {
 			this.activeBooster = target.booster;
 			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
 
-			await this.updateStateLocally('round', {
+			return {
 				target: null,
 				booster: this.activeBooster,
-			}).then(() => this.syncState());
+			};
 		} else {
-			await this.updateStateLocally('round', {
+			return {
 				target: target,
-			}).then(() => this.syncState());
+			};
 		}
+	}
+
+	private async createTarget(target: Target) {
+		this.hostSession?.sendToChannel('announce-target', {
+			text: target.title,
+			trailingText: '10s',
+		});
+
+		setTimeout(async () => {
+			await this.updateState(
+				'round',
+				{
+					target,
+				},
+				true
+			);
+
+			setTimeout(async () => {
+				this.updateState(
+					'round',
+					{
+						target: null,
+					},
+					true
+				);
+			}, target.endsAt.getTime() - Date.now());
+		}, kTargetAnnouncementDelay);
 	}
 
 	private async addFeedItem(item: FeedItem) {
@@ -355,10 +358,6 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.storage.set(StorageKeys.Scores, scores);
 
-			this.updateStateLocally('round', {
-				scores: scores,
-			});
-
 			/// Updating the user contribution
 			await this.updateUserContribution(body.user.id, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
 
@@ -369,93 +368,21 @@ export class Battle extends Game<Env, State, Events> {
 				})
 			);
 
-			/// Updating the leaderboard
-			await this.updateLeaderboard();
+			let targetUpdates: Partial<State['round']> | undefined = undefined;
 
 			if ((state.data as State['round']).target) {
-				await this.handleTargetUpdates(body.user, value);
-			}
-		});
-
-		/**
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 * DEBUG METHOD, SHOULD BE DELETED AFTER TESTING
-		 *
-		 * @event streamer-start - When the streamer starts the game.
-		 */
-		this.registerEvent('debug-send-gift', async (game, session, data) => {
-			if (data.type != 'gift') {
-				return;
+				targetUpdates = await this.handleTargetUpdates(body.user, value);
 			}
 
-			const state = await this.state.get();
-
-			if (state.state == 'round') {
-				if ((state.data as State['round']).isFinished) {
-					return;
-				}
-			}
-
-			const scores: {
-				host: number;
-				guest: number;
-			} = await this.storage.get(StorageKeys.Scores);
-
-			const value = this.activeBooster ? this.activeBooster.modifierFunction(data.data.value) : data.data.value;
-
-			if (data.data.targetHostId == this.hostSession?.user.id) {
-				this.hostSession?.sendToChannel('display-gift', {
-					side: 'host',
-					data: {
-						title: data.data.title,
-						subtitle: data.data.subtitle,
-						image: data.data.image,
-						primaryColor: data.data.primaryColor,
-						secondaryColor: data.data.secondaryColor,
-					},
-				});
-
-				scores.host += value;
-			}
-
-			if (data.data.targetHostId == this.guestSession?.user.id) {
-				this.guestSession?.sendToChannel('display-gift', {
-					side: 'guest',
-					data: {
-						title: data.data.title,
-						subtitle: data.data.subtitle,
-						image: data.data.image,
-						primaryColor: data.data.primaryColor,
-						secondaryColor: data.data.secondaryColor,
-					},
-				});
-
-				scores.guest += value;
-			}
-
-			this.hostSession?.sendToChannel('update-scores', scores);
-
-			await this.storage.set(StorageKeys.Scores, scores);
-			await this.storage.set(StorageKeys.State, {
-				state: 'round',
-				data: {
-					...(state.data as unknown as State['round']),
+			await this.updateState(
+				'round',
+				{
 					scores: scores,
+					leaderboard: await this.getLeaderboard(),
+					...(targetUpdates ?? {}),
 				},
-			});
-
-			await this.updateUserContribution(data.data.userId, value, data.data.targetHostId == this.hostSession?.user.id ? 'host' : 'guest');
-
-			await this.updateLeaderboard();
-
-			if ((state.data as State['round']).target) {
-				await this.handleTargetUpdates(this.getUserById(data.data.userId)!, value);
-			}
+				true
+			);
 		});
 
 		this.registerEvent('accept-invite', async (game, session) => {

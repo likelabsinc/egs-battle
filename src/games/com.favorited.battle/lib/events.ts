@@ -42,9 +42,18 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 			secondaryColor: string;
 		};
 	};
+	// final String text;
+	// final String? backgroundColor;
+	// final String? textColor;
+	// final String? trailingText;
+	// final String? trailingTextColor;
+
 	'announce-target': {
-		title: string;
-		subtitle: string;
+		text: string;
+		backgroundColor?: string;
+		textColor?: string;
+		trailingText?: string;
+		trailingTextColor?: string;
 	};
 }
 
