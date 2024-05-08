@@ -284,7 +284,7 @@ export class Battle extends Game<Env, State, Events> {
 					},
 					true
 				);
-			}, target.endsAt.getTime() - Date.now());
+			}, target.endsAt.getTime() + kTargetAnnouncementDelay - Date.now());
 		}, kTargetAnnouncementDelay);
 	}
 
