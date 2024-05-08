@@ -267,6 +267,8 @@ export class Battle extends Game<Env, State, Events> {
 			trailingText: '10s',
 		});
 
+		target.endsAt = new Date(Date.now() + kTargetAnnouncementDelay);
+
 		setTimeout(async () => {
 			await this.updateState(
 				'round',
@@ -284,7 +286,7 @@ export class Battle extends Game<Env, State, Events> {
 					},
 					true
 				);
-			}, target.endsAt.getTime() + kTargetAnnouncementDelay - Date.now());
+			}, target.endsAt.getTime() - Date.now());
 		}, kTargetAnnouncementDelay);
 	}
 
