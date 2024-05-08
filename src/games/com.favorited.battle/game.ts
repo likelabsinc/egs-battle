@@ -71,7 +71,7 @@ export class Battle extends Game<Env, State, Events> {
 					}, 15000);
 				}
 			}
-		}, kRoundDuration - 30000);
+		}, kRoundDuration - 15000);
 	};
 
 	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>, sync = false) {
