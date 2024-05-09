@@ -2,21 +2,30 @@ import { Game, Session } from '@likelabsinc/egs-tools';
 import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
-import { FeedItem, StorageKeys, Target, TargetType, UserScores } from './lib/types';
+import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScores } from './lib/types';
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
+import { TimerController } from './lib/timer_controller';
 
 const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kTargetAnnouncementDelay = 5 * 1000;
 
 export class Battle extends Game<Env, State, Events> {
+	private timerController: TimerController = new TimerController();
+
 	private hostSession: Session<Events> | null = null;
 	private guestSession: Session<Events> | null = null;
 
 	private boosterTimer: number | null = null;
 	private boosterDelayTimer: number | null = null;
 
-	private activeBooster: Booster | null = null;
+	private activeBoosters: {
+		host: Booster | null;
+		guest: Booster | null;
+	} = {
+		host: null,
+		guest: null,
+	};
 
 	private winStreaks: {
 		host: number;
@@ -39,39 +48,6 @@ export class Battle extends Game<Env, State, Events> {
 			host: hostLeaderboard,
 			guest: guestLeaderboard,
 		};
-	};
-
-	/// Debug method to start the booster
-	private scheduleBooster = () => {
-		this.boosterDelayTimer = setTimeout(async () => {
-			const state = await this.state.get();
-
-			if (state.state === 'round') {
-				if (!this.activeBooster) {
-					this.activeBooster = new DoubleScoreBooster('x2 value');
-
-					this.hostSession?.sendToChannel('update-booster', this.activeBooster);
-
-					this.updateState('round', {
-						booster: this.activeBooster,
-					});
-
-					this.boosterTimer = setTimeout(async () => {
-						const state = await this.state.get();
-
-						if (state.state === 'round') {
-							this.hostSession?.sendToChannel('update-booster', null);
-
-							this.updateState('round', {
-								booster: null,
-							});
-						}
-
-						this.disposeBooster();
-					}, 15000);
-				}
-			}
-		}, kRoundDuration - 15000);
 	};
 
 	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>, sync = false) {
@@ -140,8 +116,6 @@ export class Battle extends Game<Env, State, Events> {
 	private startGame = async () => {
 		this.winStreaks = await this.getStreaks();
 
-		this.scheduleBooster();
-
 		setTimeout(async () => {
 			this.createTarget({
 				title: 'reach 2, get x3',
@@ -172,9 +146,18 @@ export class Battle extends Game<Env, State, Events> {
 				host: [],
 				guest: [],
 			},
-			target: null,
-			booster: null,
-			announcement: null,
+			target: {
+				host: null,
+				guest: null,
+			},
+			booster: {
+				host: null,
+				guest: null,
+			},
+			announcement: {
+				host: null,
+				guest: null,
+			},
 			endsAt: new Date(Date.now() + kRoundDuration),
 			winner: null,
 			isFinished: false,
@@ -218,29 +201,40 @@ export class Battle extends Game<Env, State, Events> {
 		}, kRoundDuration);
 	};
 
-	private async handleTargetUpdates(
-		user: Session.User | Game.SystemNotification.User,
-		valueContributed: number
-	): Promise<Partial<State['round']> | undefined> {
-		const state = await this.state.get();
+	private async handleTargetUpdates(args: {
+		user: Session.User | Game.SystemNotification.User;
+		side: Side;
+		valueContributed: number;
+	}): Promise<Partial<State['round']> | undefined> {
+		if (args.side == Side.both) {
+			console.error('Error in handling target updates. Side is Side.both - you can`t contribute to both sides');
 
-		if (state.state !== 'round') {
 			return;
 		}
 
-		const target = (state.data as State['round']).target!;
+		const state = await this.getStateOrNull('round');
+
+		if (!state) {
+			return {};
+		}
+
+		const target = state.target![args.side.toString() as 'host' | 'guest'];
+
+		if (!target) {
+			return;
+		}
 
 		switch (target.type) {
 			case TargetType.score:
-				target.currentValue += valueContributed;
+				target.currentValue += args.valueContributed;
 
 				break;
 			case TargetType.uniqueUsers:
-				const usersContributed: string[] = (await this.storage.get('target-users-contributed')) ?? [];
+				const usersContributed: string[] = (await this.storage.get(args.side + '-target-users-contributed')) ?? [];
 
-				if (!usersContributed.includes(user.id)) {
-					usersContributed.push(user.id);
-					await this.storage.set('target-users-contributed', usersContributed);
+				if (!usersContributed.includes(args.user.id)) {
+					usersContributed.push(args.user.id);
+					await this.storage.set(args.side + '-target-users-contributed', usersContributed);
 
 					target.currentValue += 1;
 				} else {
@@ -251,57 +245,386 @@ export class Battle extends Game<Env, State, Events> {
 		}
 
 		if (target.currentValue >= target.targetValue) {
-			this.activeBooster = target.booster;
-			this.activeBooster.endsAt = new Date(Date.now() + this.activeBooster.durationInMs);
+			switch (args.side) {
+				case Side.host:
+					/// Saving target object to apply booster after the target ends
+					await this.storage.set('host-target', target);
 
-			return {
-				target: null,
-				booster: this.activeBooster,
-			};
+					/// Checking if the guest target is reached
+					if (await this.storage.get('guest-target')) {
+						this.timerController.invokeEarly('guest-target-end');
+						this.timerController.invokeEarly('host-target-end');
+
+						return {};
+					} else {
+						return {
+							target: {
+								host: null,
+								guest: state.target?.guest,
+							},
+							// booster: this.activeBoosters,
+							announcement: {
+								host: {
+									text: 'target reached',
+									durationMs: 30000,
+								},
+								guest: state.announcement?.guest ?? null,
+							},
+						};
+					}
+				case Side.guest:
+					/// Saving target object to apply booster after the target ends
+					await this.storage.set('guest-target', target);
+
+					/// Checking if the host target is reached
+					if (await this.storage.get('host-target')) {
+						this.timerController.invokeEarly('guest-target-end');
+						this.timerController.invokeEarly('host-target-end');
+
+						return {};
+					} else {
+						return {
+							target: {
+								host: state.target?.host,
+								guest: null,
+							},
+							// booster: this.activeBoosters,
+							announcement: {
+								host: state.announcement?.host ?? null,
+								guest: {
+									text: 'target reached',
+									durationMs: 30000,
+								},
+							},
+						};
+					}
+				default:
+					return {};
+			}
 		} else {
-			return {
-				target: target,
-			};
+			switch (args.side) {
+				case Side.host:
+					return {
+						target: {
+							host: target,
+							guest: state.target?.guest,
+						},
+					};
+				case Side.guest:
+					return {
+						target: {
+							host: state.target?.host,
+							guest: target,
+						},
+					};
+				default:
+					return {};
+			}
 		}
 	}
 
-	private async createTarget(target: Target) {
-		this.hostSession?.sendToChannel('announce-target', {
-			text: target.title,
-			trailingText: '10s',
-		});
+	/**
+	 * Get the state DATA if it is the same as the state provided
+	 * Otherwise, return null
+	 *
+	 * @param state
+	 * @returns
+	 */
+	private async getStateOrNull<T extends keyof State>(state: T): Promise<State[T] | null> {
+		const currentState = await this.state.get();
 
-		this.updateState('round', {
+		if (currentState.state === state) {
+			return currentState.data as State[T];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Create an announcement for the host or guest or both
+	 *
+	 * If the announcement is for both, the announcement will be displayed for both users
+	 *
+	 * If the announcement is for the host or guest, the announcement will be displayed for the user
+	 *
+	 * The announcement will be displayed for the duration of the kTargetAnnouncementDelay
+	 *
+	 * If the onAnnouncementEnd callback is provided, it will be called after the announcement ends
+	 *
+	 * @param announcement
+	 * @param side
+	 * @param onAnnouncementEnd
+	 * @returns
+	 */
+	private async createAnnouncement(args: { announcement: Announcement; side: Side; onAnnouncementEnd?: () => void }) {
+		const state = await this.getStateOrNull('round');
+
+		if (!state) {
+			return;
+		}
+
+		switch (args.side) {
+			case Side.host:
+				this.hostSession?.sendToChannel('announce-target', {
+					host: args.announcement,
+				});
+
+				await this.updateState('round', {
+					announcement: {
+						host: args.announcement,
+						guest: state.announcement?.guest ?? null,
+					},
+				});
+
+				this.timerController.addTimer({
+					id: 'host-announcement-end',
+					durationMs: args.announcement.durationMs,
+					callback: async () => {
+						const state = await this.getStateOrNull('round');
+
+						if (!state) {
+							return;
+						}
+
+						await this.updateState(
+							'round',
+							{
+								announcement: {
+									host: null,
+									guest: state.announcement?.guest ?? null,
+								},
+							},
+							true
+						);
+
+						if (args.onAnnouncementEnd) {
+							args.onAnnouncementEnd();
+						}
+					},
+				});
+
+				break;
+			case Side.guest:
+				this.guestSession?.sendToChannel('announce-target', {
+					guest: args.announcement,
+				});
+
+				await this.updateState('round', {
+					announcement: {
+						host: state.announcement?.host ?? null,
+						guest: args.announcement,
+					},
+				});
+
+				this.timerController.addTimer({
+					id: 'guest-announcement-end',
+					durationMs: args.announcement.durationMs,
+					callback: async () => {
+						const state = await this.getStateOrNull('round');
+
+						if (!state) {
+							return;
+						}
+
+						await this.updateState(
+							'round',
+							{
+								announcement: {
+									host: state.announcement?.host ?? null,
+									guest: null,
+								},
+							},
+							true
+						);
+
+						if (args.onAnnouncementEnd) {
+							args.onAnnouncementEnd();
+						}
+					},
+				});
+
+				break;
+			case Side.both:
+				this.hostSession?.sendToChannel('announce-target', {
+					host: args.announcement,
+					guest: args.announcement,
+				});
+
+				await this.updateState('round', {
+					announcement: {
+						host: args.announcement,
+						guest: args.announcement,
+					},
+				});
+
+				this.timerController.addTimer({
+					id: 'both-announcement-end',
+					durationMs: args.announcement.durationMs,
+					callback: async () => {
+						const state = await this.getStateOrNull('round');
+
+						if (!state) {
+							return;
+						}
+
+						await this.updateState(
+							'round',
+							{
+								announcement: {
+									host: null,
+									guest: null,
+								},
+							},
+							true
+						);
+
+						if (args.onAnnouncementEnd) {
+							args.onAnnouncementEnd();
+						}
+					},
+				});
+
+				break;
+		}
+	}
+
+	/**
+	 * Create a target for the host or guest or both
+	 *
+	 * @param target
+	 * @param side
+	 */
+	private async createTarget(target: Target, side: Side = Side.both) {
+		/// We need to change the endsAt date to be the current date + the delay
+		/// Because endTime specifies the time when the target object created, but
+		/// target will be displayed after the announcement delay.
+		target.endsAt = new Date(target.endsAt.getTime() + 3000);
+
+		this.createAnnouncement({
 			announcement: {
-				text: target.title,
-				trailingText: '10s',
+				text: 'New target is here!',
+				backgroundColor: '#000000',
+				textColor: '#ffffff',
+				trailingText: target.title,
+				trailingTextColor: '#ffffff',
+				durationMs: 3000,
+			},
+			side,
+			onAnnouncementEnd: async () => {
+				const state = await this.getStateOrNull('round');
+
+				if (!state) {
+					return;
+				}
+
+				switch (side) {
+					case Side.host:
+						await this.updateState(
+							'round',
+							{
+								target: {
+									host: target,
+									guest: state.target?.guest ?? null,
+								},
+							},
+							true
+						);
+
+						this.timerController.addTimer({
+							id: 'host-target-end',
+							durationMs: target.endsAt.getTime() - Date.now(),
+							callback: async () => {
+								const target = await this.storage.get('host-target');
+
+								if (!target) {
+									return;
+								}
+
+								if (target?.host?.currentValue && target?.host?.targetValue) {
+									const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
+
+									if (hasReached) {
+										this.activeBoosters.host = target?.host?.booster;
+										this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
+									}
+
+									await this.updateState(
+										'round',
+										{
+											target: {
+												host: null,
+												guest: target?.guest ?? null,
+											},
+											announcement: {
+												host: null,
+												guest: null,
+											},
+											booster: this.activeBoosters,
+										},
+										true
+									);
+								}
+							},
+						});
+						break;
+					case Side.guest:
+						await this.updateState(
+							'round',
+							{
+								target: {
+									host: state.target?.host ?? null,
+									guest: target,
+								},
+							},
+							true
+						);
+
+						this.timerController.addTimer({
+							id: 'guest-target-end',
+							durationMs: target.endsAt.getTime() - Date.now(),
+							callback: async () => {
+								const target = await this.storage.get('guest-target');
+
+								if (!target) {
+									return;
+								}
+
+								if (target?.guest?.currentValue && target?.guest?.targetValue) {
+									const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
+
+									if (hasReached) {
+										this.activeBoosters.guest = target?.guest?.booster;
+										this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
+									}
+
+									await this.updateState(
+										'round',
+										{
+											target: {
+												host: target?.host ?? null,
+												guest: null,
+											},
+											announcement: {
+												host: null,
+												guest: null,
+											},
+											booster: this.activeBoosters,
+										},
+										true
+									);
+								}
+							},
+						});
+
+						break;
+					case Side.both:
+						await this.createTarget(target, Side.host);
+						await this.createTarget(target, Side.guest);
+
+						break;
+				}
 			},
 		});
-
-		target.endsAt = new Date(target.endsAt.getTime() + kTargetAnnouncementDelay);
-
-		setTimeout(async () => {
-			await this.updateState(
-				'round',
-				{
-					target,
-					announcement: null,
-				},
-				true
-			);
-
-			setTimeout(async () => {
-				this.updateState(
-					'round',
-					{
-						target: null,
-					},
-					true
-				);
-
-				await this.storage.set('target-users-contributed', []);
-			}, target.endsAt.getTime() - Date.now());
-		}, kTargetAnnouncementDelay);
 	}
 
 	private async addFeedItem(item: FeedItem) {
@@ -340,13 +663,11 @@ export class Battle extends Game<Env, State, Events> {
 			/// Setting the type of the body to the type of the gift
 			const body = data.data as Game.SystemNotification.Body['gift'];
 
-			const state = await this.state.get();
+			const state = await this.getStateOrNull('round');
 
 			/// Checking if the state is in the round
-			if (state.state == 'round') {
-				if ((state.data as State['round']).isFinished) {
-					return;
-				}
+			if (!state || state.isFinished) {
+				return;
 			}
 
 			/// Getting the scores from the storage
@@ -355,10 +676,12 @@ export class Battle extends Game<Env, State, Events> {
 				guest: number;
 			} = await this.storage.get(StorageKeys.Scores);
 
+			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
+
 			/// Getting the value of the gift
 			///
 			/// If there is an active booster, the value of the gift is modified by the modifier function of the active booster
-			const value = this.activeBooster ? this.activeBooster.modifierFunction(body.value) : body.value;
+			const value = this.activeBoosters[side] ? this.activeBoosters[side]!.modifierFunction(body.value) : body.value;
 
 			/// Checking if the user who sent the gift is the host
 			if (body.livestream.userId == this.hostSession?.user.id) {
@@ -386,8 +709,8 @@ export class Battle extends Game<Env, State, Events> {
 
 			let targetUpdates: Partial<State['round']> | undefined = undefined;
 
-			if ((state.data as State['round']).target) {
-				targetUpdates = await this.handleTargetUpdates(body.user, value);
+			if (state.target) {
+				targetUpdates = await this.handleTargetUpdates({ user: body.user, side, valueContributed: value });
 			}
 
 			await this.updateState(
@@ -428,6 +751,7 @@ export class Battle extends Game<Env, State, Events> {
 			this.disposeBooster();
 
 			this.storage.cancelAlarm();
+			this.timerController.clear();
 
 			this.storage.delete(StorageKeys.Scores);
 			this.storage.delete(StorageKeys.UserContributions);
@@ -443,6 +767,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
+			this.timerController.clear();
 			this.disposeBooster();
 		});
 
@@ -454,6 +779,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
+			this.timerController.clear();
 			this.disposeBooster();
 		});
 	}
@@ -462,7 +788,10 @@ export class Battle extends Game<Env, State, Events> {
 		if (this.boosterTimer) clearTimeout(this.boosterTimer!);
 		if (this.boosterDelayTimer) clearTimeout(this.boosterDelayTimer!);
 
-		this.activeBooster = null;
+		this.activeBoosters = {
+			host: null,
+			guest: null,
+		};
 	}
 
 	/**

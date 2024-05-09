@@ -48,7 +48,10 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 	// final String? trailingText;
 	// final String? trailingTextColor;
 
-	'announce-target': Announcement;
+	'announce-target': {
+		host?: Announcement | null;
+		guest?: Announcement | null;
+	};
 }
 
 export type Events = Game.Events<InboundEvents, OutboundEvents>;

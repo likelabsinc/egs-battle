@@ -66,4 +66,11 @@ export interface Announcement {
 	textColor?: string;
 	trailingText?: string;
 	trailingTextColor?: string;
+	durationMs: number;
+}
+
+export enum Side {
+	host = 'host',
+	guest = 'guest',
+	both = 'both',
 }
