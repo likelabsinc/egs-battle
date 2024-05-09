@@ -26,9 +26,18 @@ export interface State {
 			host: number;
 			guest: number;
 		};
-		target: Target | null;
-		booster: Booster | null;
-		announcement: Announcement | null;
+		target: {
+			host: Target | null;
+			guest: Target | null;
+		};
+		booster: {
+			host: Booster | null;
+			guest: Booster | null;
+		};
+		announcement: {
+			host: Announcement | null;
+			guest: Announcement | null;
+		};
 		endsAt: Date;
 		winner: 'host' | 'guest' | 'draw' | null;
 		isFinished: boolean;
