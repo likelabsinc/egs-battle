@@ -109,23 +109,39 @@ export class Battle extends Game<Env, State, Events> {
 			guest: guestStreak ? parseInt(guestStreak) : 0,
 		};
 	};
-	/// Getting the user by the user id
+
+	/**
+	 * Get the user by the user id
+	 *
+	 * @param userId
+	 * @returns Session.User
+	 */
 	private getUserById = (userId: string) => this.connectedSessions.find((session) => session.user.id == userId)?.user;
 
-	/// Start the game
+	/**
+	 * Get a scheduled booster
+	 *
+	 * 90% chance to get a x2 booster
+	 * 10% chance to get a x3 booster
+	 *
+	 * @returns Booster
+	 */
+	private getScheduledBooster = async () => (Math.random() > 0.1 ? new DoubleScoreBooster('x2 value') : new TripleScoreBooster('x3 value'));
+
+	private startBoosterSchedule = async (delayInMs: number) => {
+		/// TODO: Implement the booster schedule
+	};
+
+	/**
+	 * Start the game
+	 *
+	 * @returns void
+	 */
 	private startGame = async () => {
 		this.winStreaks = await this.getStreaks();
 
-		setTimeout(async () => {
-			this.createTarget({
-				title: 'reach 2, get x3',
-				targetValue: 2,
-				currentValue: 0,
-				endsAt: new Date(Date.now() + 10000),
-				booster: new TripleScoreBooster('x3 value'),
-				type: TargetType.uniqueUsers,
-			});
-		}, 5000);
+		/// random between 0 (4m left) and 150000 (2.5m left)
+		this.startBoosterSchedule(Math.floor(Math.random() * 150000));
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
