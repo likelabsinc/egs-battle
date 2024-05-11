@@ -151,6 +151,9 @@ export class Battle extends Game<Env, State, Events> {
 							},
 							side: Side.both,
 							onAnnouncementEnd: async () => {
+								///
+								/// TODO: figure out the logic of showing value or gifter challenge
+								///
 								this.createTarget(
 									{
 										title: 'speed challenge',
@@ -585,6 +588,8 @@ export class Battle extends Game<Env, State, Events> {
 
 				switch (side) {
 					case Side.host:
+						await this.storage.set('host-score-before-target', state.scores.host);
+
 						await this.updateState(
 							'round',
 							{
@@ -601,8 +606,9 @@ export class Battle extends Game<Env, State, Events> {
 							durationMs: target.endsAt.getTime() - Date.now(),
 							callback: async () => {
 								const target = await this.storage.get('host-target');
+								const state = await this.getStateOrNull('round');
 
-								if (!target) {
+								if (!target || !state) {
 									return;
 								}
 
@@ -614,6 +620,15 @@ export class Battle extends Game<Env, State, Events> {
 										this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
 									}
 
+									const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('host-score-before-target'));
+									const announcement = hasReached
+										? {
+												text: 'total match points: ',
+												durationMs: 5000,
+												trailingText: pointsEarnedDuringBoost.toString(),
+										  }
+										: null;
+
 									await this.updateState(
 										'round',
 										{
@@ -622,8 +637,8 @@ export class Battle extends Game<Env, State, Events> {
 												guest: target?.guest ?? null,
 											},
 											announcement: {
-												host: null,
-												guest: null,
+												host: announcement,
+												guest: state.announcement.guest,
 											},
 											booster: this.activeBoosters,
 										},
@@ -634,6 +649,8 @@ export class Battle extends Game<Env, State, Events> {
 						});
 						break;
 					case Side.guest:
+						await this.storage.set('guest-score-before-target', state.scores.host);
+
 						await this.updateState(
 							'round',
 							{
@@ -650,8 +667,9 @@ export class Battle extends Game<Env, State, Events> {
 							durationMs: target.endsAt.getTime() - Date.now(),
 							callback: async () => {
 								const target = await this.storage.get('guest-target');
+								const state = await this.getStateOrNull('round');
 
-								if (!target) {
+								if (!target || !state) {
 									return;
 								}
 
@@ -663,6 +681,15 @@ export class Battle extends Game<Env, State, Events> {
 										this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
 									}
 
+									const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('guest-score-before-target'));
+									const announcement = hasReached
+										? {
+												text: 'total match points: ',
+												durationMs: 5000,
+												trailingText: pointsEarnedDuringBoost.toString(),
+										  }
+										: null;
+
 									await this.updateState(
 										'round',
 										{
@@ -671,8 +698,8 @@ export class Battle extends Game<Env, State, Events> {
 												guest: null,
 											},
 											announcement: {
-												host: null,
-												guest: null,
+												host: state.announcement.host,
+												guest: announcement,
 											},
 											booster: this.activeBoosters,
 										},
