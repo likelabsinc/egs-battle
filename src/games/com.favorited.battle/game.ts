@@ -162,6 +162,18 @@ export class Battle extends Game<Env, State, Events> {
 									},
 									Side.both
 								);
+
+								// this.createTarget(
+								// 	{
+								// 		title: 'gifter challenge',
+								// 		type: TargetType.uniqueUsers,
+								// 		targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
+								// 		currentValue: 0,
+								// 		endsAt: new Date(Date.now() + 40000),
+								// 		booster: await this.getScheduledBooster(),
+								// 	},
+								// 	Side.both
+								// );
 							},
 						});
 					},
