@@ -130,6 +130,44 @@ export class Battle extends Game<Env, State, Events> {
 
 	private startBoosterSchedule = async (delayInMs: number) => {
 		/// TODO: Implement the booster schedule
+
+		this.timerController.addTimer({
+			id: 'target-delay',
+			durationMs: delayInMs,
+			callback: async () => {
+				this.createAnnouncement({
+					announcement: {
+						text: 'speed challenge',
+						durationMs: 3000,
+
+						trailingText: '30s',
+					},
+					side: Side.both,
+					onAnnouncementEnd: async () => {
+						this.createAnnouncement({
+							announcement: {
+								text: 'reaching the target will 2x team points',
+								durationMs: 3000,
+							},
+							side: Side.both,
+							onAnnouncementEnd: async () => {
+								this.createTarget(
+									{
+										title: 'speed challenge',
+										type: TargetType.score,
+										targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+										currentValue: 0,
+										endsAt: new Date(Date.now() + 30000),
+										booster: await this.getScheduledBooster(),
+									},
+									Side.both
+								);
+							},
+						});
+					},
+				});
+			},
+		});
 	};
 
 	/**
@@ -140,8 +178,8 @@ export class Battle extends Game<Env, State, Events> {
 	private startGame = async () => {
 		this.winStreaks = await this.getStreaks();
 
-		/// random between 0 (4m left) and 150000 (2.5m left)
-		this.startBoosterSchedule(Math.floor(Math.random() * 150000));
+		/// random between 60000 (4m left) and 150000 (2.5m left)
+		this.startBoosterSchedule(Math.random() * 90000 + 60000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
