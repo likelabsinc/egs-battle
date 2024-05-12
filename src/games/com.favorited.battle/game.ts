@@ -743,6 +743,17 @@ export class Battle extends Game<Env, State, Events> {
 
 			/// Setting the type of the body to the type of the gift
 			const body = data.data as Game.SystemNotification.Body['gift'];
+			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
+
+			if (side == Side.host) {
+				if (body.livestream.userId != this.hostSession?.user.id) {
+					return;
+				}
+			} else {
+				if (body.livestream.userId != this.guestSession?.user.id) {
+					return;
+				}
+			}
 
 			const state = await this.getStateOrNull('round');
 
@@ -756,8 +767,6 @@ export class Battle extends Game<Env, State, Events> {
 				host: number;
 				guest: number;
 			} = await this.storage.get(StorageKeys.Scores);
-
-			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
 
 			/// Getting the value of the gift
 			///
