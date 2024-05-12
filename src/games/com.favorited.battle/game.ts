@@ -1015,12 +1015,21 @@ export class Battle extends Game<Env, State, Events> {
 	}
 
 	private async resetGame() {
-		this.timerController.clear();
-		this.disposeBooster();
+		try {
+			this.timerController.clear();
+			this.disposeBooster();
 
-		await this.state.set('initial', {
-			invited: false,
-		});
+			await this.state.set('initial', {
+				invited: false,
+			});
+		} catch (e) {
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: 'system',
+					body: JSON.stringify(e),
+				})
+			);
+		}
 	}
 
 	private async disposeBooster() {
