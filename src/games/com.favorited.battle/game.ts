@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 45 * 1000;
+const kRoundDuration = 120 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kTargetAnnouncementDelay = 5 * 1000;
 
@@ -194,7 +194,8 @@ export class Battle extends Game<Env, State, Events> {
 		this.winStreaks = await this.getStreaks();
 
 		/// random between 60000 (4m left) and 150000 (2.5m left)
-		this.startBoosterSchedule(Math.random() * 90000 + 60000);
+		// this.startBoosterSchedule(Math.random() * 90000 + 60000);
+		this.startBoosterSchedule(Math.random() * 10000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
@@ -569,155 +570,142 @@ export class Battle extends Game<Env, State, Events> {
 		/// target will be displayed after the announcement delay.
 		target.endsAt = new Date(target.endsAt.getTime() + 3000);
 
-		this.createAnnouncement({
-			announcement: {
-				text: 'New target is here!',
-				backgroundColor: '#000000',
-				textColor: '#ffffff',
-				trailingText: target.title,
-				trailingTextColor: '#ffffff',
-				durationMs: 3000,
-			},
-			side,
-			onAnnouncementEnd: async () => {
-				const state = await this.getStateOrNull('round');
+		const state = await this.getStateOrNull('round');
 
-				if (!state) {
-					return;
-				}
+		if (!state) {
+			return;
+		}
 
-				switch (side) {
-					case Side.host:
-						await this.storage.set('host-score-before-target', state.scores.host);
+		switch (side) {
+			case Side.host:
+				await this.storage.set('host-score-before-target', state.scores.host);
 
-						await this.updateState(
-							'round',
-							{
-								target: {
-									host: target,
-									guest: state.target?.guest ?? null,
+				await this.updateState(
+					'round',
+					{
+						target: {
+							host: target,
+							guest: state.target?.guest ?? null,
+						},
+					},
+					true
+				);
+
+				this.timerController.addTimer({
+					id: 'host-target-end',
+					durationMs: target.endsAt.getTime() - Date.now(),
+					callback: async () => {
+						const target = await this.storage.get('host-target');
+						const state = await this.getStateOrNull('round');
+
+						if (!target || !state) {
+							return;
+						}
+
+						if (target?.host?.currentValue && target?.host?.targetValue) {
+							const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
+
+							if (hasReached) {
+								this.activeBoosters.host = target?.host?.booster;
+								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
+							}
+
+							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('host-score-before-target'));
+							const announcement = hasReached
+								? {
+										text: 'total match points: ',
+										durationMs: 5000,
+										trailingText: pointsEarnedDuringBoost.toString(),
+								  }
+								: null;
+
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: null,
+										guest: target?.guest ?? null,
+									},
+									announcement: {
+										host: announcement,
+										guest: state.announcement.guest,
+									},
+									booster: this.activeBoosters,
 								},
-							},
-							true
-						);
+								true
+							);
+						}
+					},
+				});
+				break;
+			case Side.guest:
+				await this.storage.set('guest-score-before-target', state.scores.host);
 
-						this.timerController.addTimer({
-							id: 'host-target-end',
-							durationMs: target.endsAt.getTime() - Date.now(),
-							callback: async () => {
-								const target = await this.storage.get('host-target');
-								const state = await this.getStateOrNull('round');
+				await this.updateState(
+					'round',
+					{
+						target: {
+							host: state.target?.host ?? null,
+							guest: target,
+						},
+					},
+					true
+				);
 
-								if (!target || !state) {
-									return;
-								}
+				this.timerController.addTimer({
+					id: 'guest-target-end',
+					durationMs: target.endsAt.getTime() - Date.now(),
+					callback: async () => {
+						const target = await this.storage.get('guest-target');
+						const state = await this.getStateOrNull('round');
 
-								if (target?.host?.currentValue && target?.host?.targetValue) {
-									const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
+						if (!target || !state) {
+							return;
+						}
 
-									if (hasReached) {
-										this.activeBoosters.host = target?.host?.booster;
-										this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
-									}
+						if (target?.guest?.currentValue && target?.guest?.targetValue) {
+							const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
 
-									const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('host-score-before-target'));
-									const announcement = hasReached
-										? {
-												text: 'total match points: ',
-												durationMs: 5000,
-												trailingText: pointsEarnedDuringBoost.toString(),
-										  }
-										: null;
+							if (hasReached) {
+								this.activeBoosters.guest = target?.guest?.booster;
+								this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
+							}
 
-									await this.updateState(
-										'round',
-										{
-											target: {
-												host: null,
-												guest: target?.guest ?? null,
-											},
-											announcement: {
-												host: announcement,
-												guest: state.announcement.guest,
-											},
-											booster: this.activeBoosters,
-										},
-										true
-									);
-								}
-							},
-						});
-						break;
-					case Side.guest:
-						await this.storage.set('guest-score-before-target', state.scores.host);
+							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('guest-score-before-target'));
+							const announcement = hasReached
+								? {
+										text: 'total match points: ',
+										durationMs: 5000,
+										trailingText: pointsEarnedDuringBoost.toString(),
+								  }
+								: null;
 
-						await this.updateState(
-							'round',
-							{
-								target: {
-									host: state.target?.host ?? null,
-									guest: target,
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: target?.host ?? null,
+										guest: null,
+									},
+									announcement: {
+										host: state.announcement.host,
+										guest: announcement,
+									},
+									booster: this.activeBoosters,
 								},
-							},
-							true
-						);
+								true
+							);
+						}
+					},
+				});
 
-						this.timerController.addTimer({
-							id: 'guest-target-end',
-							durationMs: target.endsAt.getTime() - Date.now(),
-							callback: async () => {
-								const target = await this.storage.get('guest-target');
-								const state = await this.getStateOrNull('round');
+				break;
+			case Side.both:
+				await this.createTarget(target, Side.host);
+				await this.createTarget(target, Side.guest);
 
-								if (!target || !state) {
-									return;
-								}
-
-								if (target?.guest?.currentValue && target?.guest?.targetValue) {
-									const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
-
-									if (hasReached) {
-										this.activeBoosters.guest = target?.guest?.booster;
-										this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
-									}
-
-									const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('guest-score-before-target'));
-									const announcement = hasReached
-										? {
-												text: 'total match points: ',
-												durationMs: 5000,
-												trailingText: pointsEarnedDuringBoost.toString(),
-										  }
-										: null;
-
-									await this.updateState(
-										'round',
-										{
-											target: {
-												host: target?.host ?? null,
-												guest: null,
-											},
-											announcement: {
-												host: state.announcement.host,
-												guest: announcement,
-											},
-											booster: this.activeBoosters,
-										},
-										true
-									);
-								}
-							},
-						});
-
-						break;
-					case Side.both:
-						await this.createTarget(target, Side.host);
-						await this.createTarget(target, Side.guest);
-
-						break;
-				}
-			},
-		});
+				break;
+		}
 	}
 
 	private async addFeedItem(item: FeedItem) {
