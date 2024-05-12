@@ -998,7 +998,7 @@ export class Battle extends Game<Env, State, Events> {
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
 			if (!session.isStreamer) return;
-			this.resetGame();
+			await this.resetGame();
 
 			await this.dispose();
 		});
@@ -1008,7 +1008,7 @@ export class Battle extends Game<Env, State, Events> {
 		 */
 		this.registerEvent('disconnect', async (game, session) => {
 			if (!session.isStreamer) return;
-			this.resetGame();
+			await this.resetGame();
 
 			await this.dispose();
 		});
@@ -1018,13 +1018,9 @@ export class Battle extends Game<Env, State, Events> {
 		this.timerController.clear();
 		this.disposeBooster();
 
-		await this.updateState(
-			'initial',
-			{
-				invited: false,
-			},
-			true
-		);
+		await this.state.set('initial', {
+			invited: false,
+		});
 	}
 
 	private async disposeBooster() {
