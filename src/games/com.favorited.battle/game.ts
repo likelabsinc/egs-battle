@@ -997,6 +997,13 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: 'system',
+					body: `is streamer: ${session.isStreamer}, ${JSON.stringify(session)}`,
+				})
+			);
+
 			if (!session.isStreamer) return;
 			try {
 				await this.dispose();
