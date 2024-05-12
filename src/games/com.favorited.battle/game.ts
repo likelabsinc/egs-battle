@@ -158,7 +158,8 @@ export class Battle extends Game<Env, State, Events> {
 									{
 										title: 'speed challenge',
 										type: TargetType.score,
-										targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+										// targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+										targetValue: 5,
 										currentValue: 0,
 										endsAt: new Date(Date.now() + 30000),
 										booster: await this.getScheduledBooster(),
