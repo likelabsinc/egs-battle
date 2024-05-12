@@ -642,6 +642,13 @@ export class Battle extends Game<Env, State, Events> {
 						if (target?.host?.currentValue && target?.host?.targetValue) {
 							const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
 
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `host target reached: ${hasReached} ${target.host.currentValue}/${target.host.targetValue}`,
+								})
+							);
+
 							if (hasReached) {
 								this.activeBoosters.host = target?.host?.booster;
 								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
@@ -724,6 +731,13 @@ export class Battle extends Game<Env, State, Events> {
 
 						if (target?.guest?.currentValue && target?.guest?.targetValue) {
 							const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
+
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `guest target reached: ${hasReached} ${target.host.currentValue}/${target.host.targetValue}`,
+								})
+							);
 
 							if (hasReached) {
 								this.activeBoosters.guest = target?.guest?.booster;
