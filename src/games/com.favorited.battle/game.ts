@@ -832,6 +832,13 @@ export class Battle extends Game<Env, State, Events> {
 
 			if (state.target) {
 				targetUpdates = await this.handleTargetUpdates({ user: body.user, side, valueContributed: value });
+
+				this.addFeedItem(
+					this.buildFeedItem({
+						username: body.user.username,
+						body: targetUpdates?.toString(),
+					})
+				);
 			}
 
 			await this.updateState(
