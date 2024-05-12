@@ -617,6 +617,13 @@ export class Battle extends Game<Env, State, Events> {
 					callback: async () => {
 						this.addFeedItem(this.buildFeedItem({ username: 'system', body: 'host target end' }));
 
+						try {
+							const target = await this.storage.get('host-target');
+							const state = await this.getStateOrNull('round');
+						} catch (e) {
+							this.addFeedItem(this.buildFeedItem({ username: 'system', body: `host target end error: ${e}` }));
+						}
+
 						const target = await this.storage.get('host-target');
 						const state = await this.getStateOrNull('round');
 
