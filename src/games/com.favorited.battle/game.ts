@@ -6,9 +6,8 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 20 * 1000;
+const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
-const kTargetAnnouncementDelay = 5 * 1000;
 
 export class Battle extends Game<Env, State, Events> {
 	private timerController: TimerController = new TimerController();
