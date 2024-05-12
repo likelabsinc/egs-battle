@@ -745,6 +745,13 @@ export class Battle extends Game<Env, State, Events> {
 			const body = data.data as Game.SystemNotification.Body['gift'];
 			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
 
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: body.user.username,
+					body: `sent gift to the ${side} team, ${body.livestream.userId} ${this.hostSession?.user.id}`,
+				})
+			);
+
 			if (side == Side.host) {
 				if (body.livestream.userId != this.hostSession?.user.id) {
 					return;
