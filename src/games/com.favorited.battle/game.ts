@@ -645,32 +645,35 @@ export class Battle extends Game<Env, State, Events> {
 							if (hasReached) {
 								this.activeBoosters.host = target?.host?.booster;
 								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
-							}
 
-							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('host-score-before-target'));
-							const announcement = hasReached
-								? {
+								const pointsBeforeBooster = state.scores.host;
+
+								this.createBooster(this.activeBoosters.host!, Side.host, async () => {
+									const scores: {
+										host: number;
+										guest: number;
+									} = await this.storage.get(StorageKeys.Scores);
+									const state = await this.getStateOrNull('round');
+
+									const pointsEarnedDuringBoost = scores.host - pointsBeforeBooster;
+									const announcement = {
 										text: 'total match points: ',
 										durationMs: 5000,
 										trailingText: pointsEarnedDuringBoost.toString(),
-								  }
-								: null;
+									};
 
-							await this.updateState(
-								'round',
-								{
-									target: {
-										host: null,
-										guest: target?.guest ?? null,
-									},
-									announcement: {
-										host: announcement,
-										guest: state.announcement.guest,
-									},
-									booster: this.activeBoosters,
-								},
-								true
-							);
+									await this.updateState(
+										'round',
+										{
+											announcement: {
+												host: announcement,
+												guest: state?.announcement.guest ?? null,
+											},
+										},
+										true
+									);
+								});
+							}
 						}
 					},
 				});
@@ -700,6 +703,7 @@ export class Battle extends Game<Env, State, Events> {
 							return;
 						}
 
+						/// Checking if the target is null, if null - target not reached
 						if (!target) {
 							await this.updateState(
 								'round',
@@ -724,32 +728,35 @@ export class Battle extends Game<Env, State, Events> {
 							if (hasReached) {
 								this.activeBoosters.guest = target?.guest?.booster;
 								this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
-							}
 
-							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('guest-score-before-target'));
-							const announcement = hasReached
-								? {
+								const pointsBeforeBooster = state.scores.guest;
+
+								this.createBooster(this.activeBoosters.guest!, Side.guest, async () => {
+									const scores: {
+										host: number;
+										guest: number;
+									} = await this.storage.get(StorageKeys.Scores);
+									const state = await this.getStateOrNull('round');
+
+									const pointsEarnedDuringBoost = scores.guest - pointsBeforeBooster;
+									const announcement = {
 										text: 'total match points: ',
 										durationMs: 5000,
 										trailingText: pointsEarnedDuringBoost.toString(),
-								  }
-								: null;
+									};
 
-							await this.updateState(
-								'round',
-								{
-									target: {
-										host: target?.host ?? null,
-										guest: null,
-									},
-									announcement: {
-										host: state.announcement.host,
-										guest: announcement,
-									},
-									booster: this.activeBoosters,
-								},
-								true
-							);
+									await this.updateState(
+										'round',
+										{
+											announcement: {
+												host: state?.announcement.host ?? null,
+												guest: announcement,
+											},
+										},
+										true
+									);
+								});
+							}
 						}
 					},
 				});
@@ -758,6 +765,78 @@ export class Battle extends Game<Env, State, Events> {
 			case Side.both:
 				await this.createTarget({ ...target }, Side.host);
 				await this.createTarget({ ...target }, Side.guest);
+
+				break;
+		}
+	}
+
+	private async createBooster(booster: Booster, side: Side, onBoosterEnd?: () => void) {
+		const state = await this.getStateOrNull('round');
+
+		if (!state) {
+			return;
+		}
+
+		switch (side) {
+			case Side.host:
+				await this.updateState('round', {
+					booster: {
+						host: booster,
+						guest: state.booster.guest,
+					},
+				});
+
+				this.timerController.addTimer({
+					id: 'host-booster-end',
+					durationMs: booster.durationInMs,
+					callback: async () => {
+						await this.updateState('round', {
+							announcement: {
+								host: null,
+								guest: state.announcement.guest,
+							},
+							booster: {
+								host: null,
+								guest: state.booster.guest,
+							},
+						});
+
+						if (onBoosterEnd) onBoosterEnd();
+					},
+				});
+
+				break;
+			case Side.guest:
+				await this.updateState('round', {
+					announcement: {
+						host: state.announcement.host,
+						guest: null,
+					},
+					booster: {
+						host: state.booster.host,
+						guest: booster,
+					},
+				});
+
+				this.timerController.addTimer({
+					id: 'guest-booster-end',
+					durationMs: booster.durationInMs,
+					callback: async () => {
+						await this.updateState('round', {
+							booster: {
+								host: state.booster.host,
+								guest: null,
+							},
+						});
+
+						if (onBoosterEnd) onBoosterEnd();
+					},
+				});
+
+				break;
+			case Side.both:
+				await this.createBooster({ ...booster }, Side.host, onBoosterEnd);
+				await this.createBooster({ ...booster }, Side.guest, onBoosterEnd);
 
 				break;
 		}
@@ -902,8 +981,7 @@ export class Battle extends Game<Env, State, Events> {
 			this.storage.cancelAlarm();
 			this.timerController.clear();
 
-			this.storage.delete(StorageKeys.Scores);
-			this.storage.delete(StorageKeys.UserContributions);
+			this.storage.clear();
 
 			this.startGame();
 		});
