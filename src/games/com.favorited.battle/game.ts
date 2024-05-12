@@ -160,7 +160,7 @@ export class Battle extends Game<Env, State, Events> {
 										// targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
 										targetValue: 5,
 										currentValue: 0,
-										endsAt: new Date(Date.now() + 10000),
+										endsAt: new Date(Date.now() + 15000),
 										booster: await this.getScheduledBooster(),
 									},
 									Side.both
@@ -195,7 +195,7 @@ export class Battle extends Game<Env, State, Events> {
 
 		/// random between 60000 (4m left) and 150000 (2.5m left)
 		// this.startBoosterSchedule(Math.random() * 90000 + 60000);
-		this.startBoosterSchedule(Math.random() * 10000);
+		this.startBoosterSchedule(Math.random() * 2000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
