@@ -325,7 +325,7 @@ export class Battle extends Game<Env, State, Events> {
 			switch (args.side) {
 				case Side.host:
 					/// Saving target object to apply booster after the target ends
-					await this.storage.set('host-target', target);
+					await this.storage.set('host-target', { ...target });
 
 					/// Checking if the guest target is reached
 					if (await this.storage.get('guest-target')) {
@@ -351,7 +351,7 @@ export class Battle extends Game<Env, State, Events> {
 					}
 				case Side.guest:
 					/// Saving target object to apply booster after the target ends
-					await this.storage.set('guest-target', target);
+					await this.storage.set('guest-target', { ...target });
 
 					/// Checking if the host target is reached
 					if (await this.storage.get('host-target')) {
