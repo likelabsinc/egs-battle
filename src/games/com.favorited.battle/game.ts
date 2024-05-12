@@ -615,8 +615,17 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'host-target-end',
 					durationMs: target.endsAt.getTime() - Date.now(),
 					callback: async () => {
+						this.addFeedItem(this.buildFeedItem({ username: 'system', body: 'host target end' }));
+
 						const target = await this.storage.get('host-target');
 						const state = await this.getStateOrNull('round');
+
+						this.addFeedItem(
+							this.buildFeedItem({
+								username: 'system',
+								body: `host target end: ${target.host.currentValue}/${target.host.targetValue}, state is ${state}`,
+							})
+						);
 
 						if (!state) {
 							return;
