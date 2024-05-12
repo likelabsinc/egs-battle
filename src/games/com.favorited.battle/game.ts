@@ -756,8 +756,8 @@ export class Battle extends Game<Env, State, Events> {
 
 				break;
 			case Side.both:
-				await this.createTarget(structuredClone(target), Side.host);
-				await this.createTarget(structuredClone(target), Side.guest);
+				await this.createTarget({ ...target }, Side.host);
+				await this.createTarget({ ...target }, Side.guest);
 
 				break;
 		}
