@@ -998,13 +998,21 @@ export class Battle extends Game<Env, State, Events> {
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
 			if (!session.isStreamer) return;
+			try {
+				await this.dispose();
 
-			await this.dispose();
+				this.storage.clear();
 
-			this.storage.clear();
-
-			this.timerController.clear();
-			this.disposeBooster();
+				this.timerController.clear();
+				this.disposeBooster();
+			} catch (e) {
+				this.addFeedItem(
+					this.buildFeedItem({
+						username: 'system',
+						body: `error: ${e}`,
+					})
+				);
+			}
 		});
 
 		/**
