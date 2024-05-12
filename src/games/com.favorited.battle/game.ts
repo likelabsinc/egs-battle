@@ -994,6 +994,8 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
+			this.storage.clear();
+
 			this.timerController.clear();
 			this.disposeBooster();
 		});
@@ -1005,6 +1007,8 @@ export class Battle extends Game<Env, State, Events> {
 			if (!session.isStreamer) return;
 
 			await this.dispose();
+
+			this.storage.clear();
 
 			this.timerController.clear();
 			this.disposeBooster();
