@@ -288,7 +288,14 @@ export class Battle extends Game<Env, State, Events> {
 			return {};
 		}
 
-		const target = state.target![args.side.toString() as 'host' | 'guest'];
+		const target = state.target![args.side];
+
+		this.addFeedItem(
+			this.buildFeedItem({
+				username: args.user.username,
+				body: `contributed ${args.valueContributed} to the ${args.side} target: ${target?.currentValue}/${target?.targetValue}`,
+			})
+		);
 
 		if (!target) {
 			return;
@@ -374,6 +381,13 @@ export class Battle extends Game<Env, State, Events> {
 		} else {
 			switch (args.side) {
 				case Side.host:
+					this.addFeedItem(
+						this.buildFeedItem({
+							username: args.user.username,
+							body: `serving results to the ${args.side} target: ${target.currentValue}/${target.targetValue}`,
+						})
+					);
+
 					return {
 						target: {
 							host: target,
@@ -381,6 +395,13 @@ export class Battle extends Game<Env, State, Events> {
 						},
 					};
 				case Side.guest:
+					this.addFeedItem(
+						this.buildFeedItem({
+							username: args.user.username,
+							body: `serving results to the ${args.side} target: ${target.currentValue}/${target.targetValue}`,
+						})
+					);
+
 					return {
 						target: {
 							host: state.target?.host,
