@@ -682,6 +682,13 @@ export class Battle extends Game<Env, State, Events> {
 									);
 								});
 							}
+						} else {
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `host target not reached: ${target.host.currentValue}/${target.host.targetValue}`,
+								})
+							);
 						}
 					},
 				});
