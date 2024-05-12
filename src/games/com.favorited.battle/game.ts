@@ -836,7 +836,7 @@ export class Battle extends Game<Env, State, Events> {
 				this.addFeedItem(
 					this.buildFeedItem({
 						username: body.user.username,
-						body: targetUpdates?.toString(),
+						body: JSON.stringify(targetUpdates),
 					})
 				);
 			}
