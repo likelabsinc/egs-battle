@@ -997,29 +997,11 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: 'system',
-					body: `is streamer: ${session.isStreamer}, ${JSON.stringify(session)}`,
-				})
-			);
-
 			if (!session.isStreamer) return;
-			try {
-				await this.dispose();
 
-				this.storage.clear();
+			await this.dispose();
 
-				this.timerController.clear();
-				this.disposeBooster();
-			} catch (e) {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `error: ${e}`,
-					})
-				);
-			}
+			this.resetGame();
 		});
 
 		/**
@@ -1030,10 +1012,16 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.dispose();
 
-			this.storage.clear();
+			this.resetGame();
+		});
+	}
 
-			this.timerController.clear();
-			this.disposeBooster();
+	private async resetGame() {
+		this.timerController.clear();
+		this.disposeBooster();
+
+		this.updateState('initial', {
+			invited: false,
 		});
 	}
 
