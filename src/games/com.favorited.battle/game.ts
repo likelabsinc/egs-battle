@@ -598,8 +598,26 @@ export class Battle extends Game<Env, State, Events> {
 						const target = await this.storage.get('host-target');
 						const state = await this.getStateOrNull('round');
 
-						if (!target || !state) {
+						if (!state) {
 							return;
+						}
+
+						if (!target) {
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: null,
+										guest: target?.guest ?? null,
+									},
+									announcement: {
+										host: null,
+										guest: state.announcement.guest,
+									},
+									booster: this.activeBoosters,
+								},
+								true
+							);
 						}
 
 						if (target?.host?.currentValue && target?.host?.targetValue) {
@@ -659,8 +677,26 @@ export class Battle extends Game<Env, State, Events> {
 						const target = await this.storage.get('guest-target');
 						const state = await this.getStateOrNull('round');
 
-						if (!target || !state) {
+						if (!state) {
 							return;
+						}
+
+						if (!target) {
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: target?.host ?? null,
+										guest: null,
+									},
+									announcement: {
+										host: state.announcement.host,
+										guest: null,
+									},
+									booster: this.activeBoosters,
+								},
+								true
+							);
 						}
 
 						if (target?.guest?.currentValue && target?.guest?.targetValue) {
@@ -751,16 +787,6 @@ export class Battle extends Game<Env, State, Events> {
 					body: `sent gift to the ${side} team, ${body.livestream.userId} ${this.hostSession?.user.id}`,
 				})
 			);
-
-			if (side == Side.host) {
-				if (body.livestream.userId != this.hostSession?.user.id) {
-					return;
-				}
-			} else {
-				if (body.livestream.userId != this.guestSession?.user.id) {
-					return;
-				}
-			}
 
 			const state = await this.getStateOrNull('round');
 
