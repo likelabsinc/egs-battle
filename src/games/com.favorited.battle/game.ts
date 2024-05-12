@@ -161,7 +161,7 @@ export class Battle extends Game<Env, State, Events> {
 										// targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
 										targetValue: 5,
 										currentValue: 0,
-										endsAt: new Date(Date.now() + 30000),
+										endsAt: new Date(Date.now() + 10000),
 										booster: await this.getScheduledBooster(),
 									},
 									Side.both
@@ -615,31 +615,8 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'host-target-end',
 					durationMs: target.endsAt.getTime() - Date.now(),
 					callback: async () => {
-						this.addFeedItem(this.buildFeedItem({ username: 'system', body: 'host target end' }));
-
-						try {
-							const target = await this.storage.get('host-target');
-							const state = await this.getStateOrNull('round');
-
-							this.addFeedItem(
-								this.buildFeedItem({
-									username: 'system',
-									body: `host target end: ${target.host.currentValue}/${target.host.targetValue}, state is ${state}`,
-								})
-							);
-						} catch (e) {
-							this.addFeedItem(this.buildFeedItem({ username: 'system', body: `host target end error: ${e}` }));
-						}
-
-						const target = await this.storage.get('host-target');
+						const target: Target = await this.storage.get('host-target');
 						const state = await this.getStateOrNull('round');
-
-						this.addFeedItem(
-							this.buildFeedItem({
-								username: 'system',
-								body: `host target end: ${target.host.currentValue}/${target.host.targetValue}, state is ${state}`,
-							})
-						);
 
 						if (!state) {
 							return;
@@ -651,7 +628,7 @@ export class Battle extends Game<Env, State, Events> {
 								{
 									target: {
 										host: null,
-										guest: target?.guest ?? null,
+										guest: state.target.guest ?? null,
 									},
 									announcement: {
 										host: null,
@@ -663,18 +640,11 @@ export class Battle extends Game<Env, State, Events> {
 							);
 						}
 
-						if (target?.host?.currentValue && target?.host?.targetValue) {
-							const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
-
-							this.addFeedItem(
-								this.buildFeedItem({
-									username: 'system',
-									body: `host target reached: ${hasReached} ${target.host.currentValue}/${target.host.targetValue}`,
-								})
-							);
+						if (target?.currentValue && target?.targetValue) {
+							const hasReached = target?.currentValue >= target?.targetValue;
 
 							if (hasReached) {
-								this.activeBoosters.host = target?.host?.booster;
+								this.activeBoosters.host = target?.booster;
 								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
 
 								const pointsBeforeBooster = state.scores.host;
@@ -705,13 +675,6 @@ export class Battle extends Game<Env, State, Events> {
 									);
 								});
 							}
-						} else {
-							this.addFeedItem(
-								this.buildFeedItem({
-									username: 'system',
-									body: `host target not reached: ${target.host.currentValue}/${target.host.targetValue}`,
-								})
-							);
 						}
 					},
 				});
@@ -734,7 +697,7 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'guest-target-end',
 					durationMs: target.endsAt.getTime() - Date.now(),
 					callback: async () => {
-						const target = await this.storage.get('guest-target');
+						const target: Target = await this.storage.get('guest-target');
 						const state = await this.getStateOrNull('round');
 
 						if (!state) {
@@ -747,7 +710,7 @@ export class Battle extends Game<Env, State, Events> {
 								'round',
 								{
 									target: {
-										host: target?.host ?? null,
+										host: state.target.host ?? null,
 										guest: null,
 									},
 									announcement: {
@@ -760,18 +723,18 @@ export class Battle extends Game<Env, State, Events> {
 							);
 						}
 
-						if (target?.guest?.currentValue && target?.guest?.targetValue) {
-							const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
+						if (target?.currentValue && target?.targetValue) {
+							const hasReached = target?.currentValue >= target?.targetValue;
 
 							this.addFeedItem(
 								this.buildFeedItem({
 									username: 'system',
-									body: `guest target reached: ${hasReached} ${target.host.currentValue}/${target.host.targetValue}`,
+									body: `guest target reached: ${hasReached} ${target.currentValue}/${target.targetValue}`,
 								})
 							);
 
 							if (hasReached) {
-								this.activeBoosters.guest = target?.guest?.booster;
+								this.activeBoosters.guest = target?.booster;
 								this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
 
 								const pointsBeforeBooster = state.scores.guest;
