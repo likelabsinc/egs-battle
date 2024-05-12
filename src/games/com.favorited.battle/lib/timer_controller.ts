@@ -26,7 +26,7 @@ export class TimerController {
 		});
 
 		/// remove timer from map after durationMs
-		this.timers.set(args.id + '-cleaner', {
+		this.timers.set(`${args.id}-cleaner`, {
 			timerId: setTimeout(() => {
 				this.timers.delete(args.id);
 			}, args.durationMs),

@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 45 * 1000;
+const kRoundDuration = 120 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kTargetAnnouncementDelay = 5 * 1000;
 
@@ -109,23 +109,93 @@ export class Battle extends Game<Env, State, Events> {
 			guest: guestStreak ? parseInt(guestStreak) : 0,
 		};
 	};
-	/// Getting the user by the user id
+
+	/**
+	 * Get the user by the user id
+	 *
+	 * @param userId
+	 * @returns Session.User
+	 */
 	private getUserById = (userId: string) => this.connectedSessions.find((session) => session.user.id == userId)?.user;
 
-	/// Start the game
+	/**
+	 * Get a scheduled booster
+	 *
+	 * 90% chance to get a x2 booster
+	 * 10% chance to get a x3 booster
+	 *
+	 * @returns Booster
+	 */
+	private getScheduledBooster = async () => (Math.random() > 0.1 ? new DoubleScoreBooster('x2 value') : new TripleScoreBooster('x3 value'));
+
+	private startBoosterSchedule = async (delayInMs: number) => {
+		/// TODO: Implement the booster schedule
+
+		this.timerController.addTimer({
+			id: 'target-delay',
+			durationMs: delayInMs,
+			callback: async () => {
+				this.createAnnouncement({
+					announcement: {
+						text: 'speed challenge',
+						durationMs: 3000,
+
+						trailingText: '30s',
+					},
+					side: Side.both,
+					onAnnouncementEnd: async () => {
+						this.createAnnouncement({
+							announcement: {
+								text: 'reaching the target will 2x team points',
+								durationMs: 3000,
+							},
+							side: Side.both,
+							onAnnouncementEnd: async () => {
+								///
+								/// TODO: figure out the logic of showing value or gifter challenge
+								///
+								this.createTarget(
+									{
+										title: 'speed challenge',
+										type: TargetType.score,
+										targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+										currentValue: 0,
+										endsAt: new Date(Date.now() + 30000),
+										booster: await this.getScheduledBooster(),
+									},
+									Side.both
+								);
+
+								// this.createTarget(
+								// 	{
+								// 		title: 'gifter challenge',
+								// 		type: TargetType.uniqueUsers,
+								// 		targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
+								// 		currentValue: 0,
+								// 		endsAt: new Date(Date.now() + 40000),
+								// 		booster: await this.getScheduledBooster(),
+								// 	},
+								// 	Side.both
+								// );
+							},
+						});
+					},
+				});
+			},
+		});
+	};
+
+	/**
+	 * Start the game
+	 *
+	 * @returns void
+	 */
 	private startGame = async () => {
 		this.winStreaks = await this.getStreaks();
 
-		setTimeout(async () => {
-			this.createTarget({
-				title: 'reach 2, get x3',
-				targetValue: 2,
-				currentValue: 0,
-				endsAt: new Date(Date.now() + 10000),
-				booster: new TripleScoreBooster('x3 value'),
-				type: TargetType.uniqueUsers,
-			});
-		}, 5000);
+		/// random between 60000 (4m left) and 150000 (2.5m left)
+		// this.startBoosterSchedule(Math.random() * 90000 + 60000);
+		this.startBoosterSchedule(Math.random() * 10000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
 		await this.storage.set(StorageKeys.UserContributions, { host: {}, guest: {} });
@@ -500,131 +570,142 @@ export class Battle extends Game<Env, State, Events> {
 		/// target will be displayed after the announcement delay.
 		target.endsAt = new Date(target.endsAt.getTime() + 3000);
 
-		this.createAnnouncement({
-			announcement: {
-				text: 'New target is here!',
-				backgroundColor: '#000000',
-				textColor: '#ffffff',
-				trailingText: target.title,
-				trailingTextColor: '#ffffff',
-				durationMs: 3000,
-			},
-			side,
-			onAnnouncementEnd: async () => {
-				const state = await this.getStateOrNull('round');
+		const state = await this.getStateOrNull('round');
 
-				if (!state) {
-					return;
-				}
+		if (!state) {
+			return;
+		}
 
-				switch (side) {
-					case Side.host:
-						await this.updateState(
-							'round',
-							{
-								target: {
-									host: target,
-									guest: state.target?.guest ?? null,
+		switch (side) {
+			case Side.host:
+				await this.storage.set('host-score-before-target', state.scores.host);
+
+				await this.updateState(
+					'round',
+					{
+						target: {
+							host: target,
+							guest: state.target?.guest ?? null,
+						},
+					},
+					true
+				);
+
+				this.timerController.addTimer({
+					id: 'host-target-end',
+					durationMs: target.endsAt.getTime() - Date.now(),
+					callback: async () => {
+						const target = await this.storage.get('host-target');
+						const state = await this.getStateOrNull('round');
+
+						if (!target || !state) {
+							return;
+						}
+
+						if (target?.host?.currentValue && target?.host?.targetValue) {
+							const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
+
+							if (hasReached) {
+								this.activeBoosters.host = target?.host?.booster;
+								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
+							}
+
+							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('host-score-before-target'));
+							const announcement = hasReached
+								? {
+										text: 'total match points: ',
+										durationMs: 5000,
+										trailingText: pointsEarnedDuringBoost.toString(),
+								  }
+								: null;
+
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: null,
+										guest: target?.guest ?? null,
+									},
+									announcement: {
+										host: announcement,
+										guest: state.announcement.guest,
+									},
+									booster: this.activeBoosters,
 								},
-							},
-							true
-						);
+								true
+							);
+						}
+					},
+				});
+				break;
+			case Side.guest:
+				await this.storage.set('guest-score-before-target', state.scores.host);
 
-						this.timerController.addTimer({
-							id: 'host-target-end',
-							durationMs: target.endsAt.getTime() - Date.now(),
-							callback: async () => {
-								const target = await this.storage.get('host-target');
+				await this.updateState(
+					'round',
+					{
+						target: {
+							host: state.target?.host ?? null,
+							guest: target,
+						},
+					},
+					true
+				);
 
-								if (!target) {
-									return;
-								}
+				this.timerController.addTimer({
+					id: 'guest-target-end',
+					durationMs: target.endsAt.getTime() - Date.now(),
+					callback: async () => {
+						const target = await this.storage.get('guest-target');
+						const state = await this.getStateOrNull('round');
 
-								if (target?.host?.currentValue && target?.host?.targetValue) {
-									const hasReached = target?.host?.currentValue >= target?.host?.targetValue;
+						if (!target || !state) {
+							return;
+						}
 
-									if (hasReached) {
-										this.activeBoosters.host = target?.host?.booster;
-										this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
-									}
+						if (target?.guest?.currentValue && target?.guest?.targetValue) {
+							const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
 
-									await this.updateState(
-										'round',
-										{
-											target: {
-												host: null,
-												guest: target?.guest ?? null,
-											},
-											announcement: {
-												host: null,
-												guest: null,
-											},
-											booster: this.activeBoosters,
-										},
-										true
-									);
-								}
-							},
-						});
-						break;
-					case Side.guest:
-						await this.updateState(
-							'round',
-							{
-								target: {
-									host: state.target?.host ?? null,
-									guest: target,
+							if (hasReached) {
+								this.activeBoosters.guest = target?.guest?.booster;
+								this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
+							}
+
+							const pointsEarnedDuringBoost = state.scores.host - (await this.storage.get('guest-score-before-target'));
+							const announcement = hasReached
+								? {
+										text: 'total match points: ',
+										durationMs: 5000,
+										trailingText: pointsEarnedDuringBoost.toString(),
+								  }
+								: null;
+
+							await this.updateState(
+								'round',
+								{
+									target: {
+										host: target?.host ?? null,
+										guest: null,
+									},
+									announcement: {
+										host: state.announcement.host,
+										guest: announcement,
+									},
+									booster: this.activeBoosters,
 								},
-							},
-							true
-						);
+								true
+							);
+						}
+					},
+				});
 
-						this.timerController.addTimer({
-							id: 'guest-target-end',
-							durationMs: target.endsAt.getTime() - Date.now(),
-							callback: async () => {
-								const target = await this.storage.get('guest-target');
+				break;
+			case Side.both:
+				await this.createTarget(target, Side.host);
+				await this.createTarget(target, Side.guest);
 
-								if (!target) {
-									return;
-								}
-
-								if (target?.guest?.currentValue && target?.guest?.targetValue) {
-									const hasReached = target?.guest?.currentValue >= target?.guest?.targetValue;
-
-									if (hasReached) {
-										this.activeBoosters.guest = target?.guest?.booster;
-										this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
-									}
-
-									await this.updateState(
-										'round',
-										{
-											target: {
-												host: target?.host ?? null,
-												guest: null,
-											},
-											announcement: {
-												host: null,
-												guest: null,
-											},
-											booster: this.activeBoosters,
-										},
-										true
-									);
-								}
-							},
-						});
-
-						break;
-					case Side.both:
-						await this.createTarget(target, Side.host);
-						await this.createTarget(target, Side.guest);
-
-						break;
-				}
-			},
-		});
+				break;
+		}
 	}
 
 	private async addFeedItem(item: FeedItem) {
