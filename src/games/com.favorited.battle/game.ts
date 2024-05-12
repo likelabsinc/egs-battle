@@ -568,8 +568,6 @@ export class Battle extends Game<Env, State, Events> {
 		/// We need to change the endsAt date to be the current date + the delay
 		/// Because endTime specifies the time when the target object created, but
 		/// target will be displayed after the announcement delay.
-		target.endsAt = new Date(target.endsAt.getTime() + 3000);
-
 		const state = await this.getStateOrNull('round');
 
 		if (!state) {
