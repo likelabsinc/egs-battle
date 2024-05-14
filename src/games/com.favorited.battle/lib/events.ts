@@ -19,6 +19,9 @@ interface InboundEvents extends Game.Events.InboundEvents {
 	};
 	'accept-invite': undefined;
 	'decline-invite': undefined;
+	'user-double-tap': {
+		side: 'host' | 'guest';
+	};
 }
 
 interface OutboundEvents extends Game.Events.OutboundEvents {

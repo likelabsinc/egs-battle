@@ -6,6 +6,7 @@ export enum StorageKeys {
 	Scores = 'scores',
 	UserContributions = 'user-contributions',
 	Feed = 'feed',
+	UsersDoubleTapped = 'users-double-tapped',
 }
 
 export interface UserContribution {

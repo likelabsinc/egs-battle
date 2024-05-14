@@ -8,6 +8,7 @@ import { TimerController } from './lib/timer_controller';
 
 const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
+const kDoubleTapValue = 3;
 
 export class Battle extends Game<Env, State, Events> {
 	private timerController: TimerController = new TimerController();
@@ -614,8 +615,30 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'host-target-end',
 					durationMs: target.endsAt.getTime() - Date.now(),
 					callback: async () => {
+						this.addFeedItem(
+							this.buildFeedItem({
+								username: 'system',
+								body: `host timer end`,
+							})
+						);
+
 						const target: Target = await this.storage.get('host-target');
+
+						this.addFeedItem(
+							this.buildFeedItem({
+								username: 'system',
+								body: `host target: ${JSON.stringify(target)}`,
+							})
+						);
+
 						const state = await this.getStateOrNull('round');
+
+						this.addFeedItem(
+							this.buildFeedItem({
+								username: 'system',
+								body: `host state: isNull ${state != null} isUndefined: ${state == undefined}`,
+							})
+						);
 
 						if (!state) {
 							return;
@@ -975,6 +998,57 @@ export class Battle extends Game<Env, State, Events> {
 			if (!session.isStreamer) return;
 
 			this.startGame();
+		});
+
+		this.registerEvent('user-double-tap', async (game, session, data) => {
+			const usersDoubleTapped: Set<string> = await this.storage.get(StorageKeys.UsersDoubleTapped);
+
+			if (usersDoubleTapped.has(session.user.id)) {
+				return;
+			}
+
+			usersDoubleTapped.add(session.user.id);
+
+			await this.storage.set(StorageKeys.UsersDoubleTapped, usersDoubleTapped);
+
+			/// Getting the scores from the storage
+			const scores: {
+				host: number;
+				guest: number;
+			} = await this.storage.get(StorageKeys.Scores);
+
+			/// Checking if the user who sent the gift is the host
+			if (data.side == Side.host) {
+				scores.host += kDoubleTapValue;
+			}
+
+			/// Checking if the user who sent the gift is the guest
+			if (data.side == Side.guest) {
+				scores.guest += kDoubleTapValue;
+			}
+
+			this.hostSession?.sendToChannel('update-scores', scores);
+
+			await this.storage.set(StorageKeys.Scores, scores);
+
+			/// Updating the user contribution
+			await this.updateUserContribution(session.user.id, kDoubleTapValue, data.side);
+
+			// await this.addFeedItem(
+			// 	this.buildFeedItem({
+			// 		username: body.user.username,
+			// 		body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
+			// 	})
+			// );
+
+			await this.updateState(
+				'round',
+				{
+					scores: scores,
+					leaderboard: await this.getLeaderboard(),
+				},
+				true
+			);
 		});
 
 		/**
