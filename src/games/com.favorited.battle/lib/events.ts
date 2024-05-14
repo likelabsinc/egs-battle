@@ -45,6 +45,7 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 			secondaryColor: string;
 		};
 	};
+	'set-double-tapped': boolean;
 	// final String text;
 	// final String? backgroundColor;
 	// final String? textColor;

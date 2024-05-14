@@ -1006,6 +1006,7 @@ export class Battle extends Game<Env, State, Events> {
 			if (usersDoubleTapped.has(session.user.id)) {
 				return;
 			}
+			session.send('set-double-tapped', true);
 
 			usersDoubleTapped.add(session.user.id);
 
@@ -1133,6 +1134,7 @@ export class Battle extends Game<Env, State, Events> {
 		}
 
 		const state = await this.state.get();
+		const usersDoubleTapped: Set<string> = await this.storage.get(StorageKeys.UsersDoubleTapped);
 
 		this.chatActions.restoreForSession(session);
 
@@ -1143,6 +1145,10 @@ export class Battle extends Game<Env, State, Events> {
 			return;
 		} else {
 			session.send('set-state', state.toJson());
+		}
+
+		if (usersDoubleTapped.has(session.user.id)) {
+			session.send('set-double-tapped', true);
 		}
 	}
 }
