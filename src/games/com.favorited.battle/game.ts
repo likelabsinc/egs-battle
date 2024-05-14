@@ -878,94 +878,85 @@ export class Battle extends Game<Env, State, Events> {
 
 	protected registerEvents(): void {
 		this.registerGlobalEvent('system-notification', async (game, data) => {
-			try {
-				if (data.type != 'gift') {
-					return;
-				}
+			if (data.type != 'gift') {
+				return;
+			}
 
-				/// Setting the type of the body to the type of the gift
-				const body = data.data as Game.SystemNotification.Body['gift'];
-				const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
+			/// Setting the type of the body to the type of the gift
+			const body = data.data as Game.SystemNotification.Body['gift'];
+			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
+
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: body.user.username,
+					body: `sent gift to the ${side} team, ${body.livestream.userId} ${this.hostSession?.user.id}`,
+				})
+			);
+
+			const state = await this.getStateOrNull('round');
+
+			/// Checking if the state is in the round
+			if (!state || state.isFinished) {
+				return;
+			}
+
+			/// Getting the scores from the storage
+			const scores: {
+				host: number;
+				guest: number;
+			} = await this.storage.get(StorageKeys.Scores);
+
+			/// Getting the value of the gift
+			///
+			/// If there is an active booster, the value of the gift is modified by the modifier function of the active booster
+			const value = this.activeBoosters[side] ? this.activeBoosters[side]!.modifierFunction(body.value) : body.value;
+
+			/// Checking if the user who sent the gift is the host
+			if (body.livestream.userId == this.hostSession?.user.id) {
+				scores.host += value;
+			}
+
+			/// Checking if the user who sent the gift is the guest
+			if (body.livestream.userId == this.guestSession?.user.id) {
+				scores.guest += value;
+			}
+
+			this.hostSession?.sendToChannel('update-scores', scores);
+
+			await this.storage.set(StorageKeys.Scores, scores);
+
+			/// Updating the user contribution
+			await this.updateUserContribution(body.user.id, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
+
+			await this.addFeedItem(
+				this.buildFeedItem({
+					username: body.user.username,
+					body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
+				})
+			);
+
+			let targetUpdates: Partial<State['round']> | undefined = undefined;
+
+			if (state.target.host || state.target.guest) {
+				targetUpdates = await this.handleTargetUpdates({ user: body.user, side, valueContributed: value });
 
 				this.addFeedItem(
 					this.buildFeedItem({
 						username: body.user.username,
-						body: `sent gift to the ${side} team, ${body.livestream.userId} ${this.hostSession?.user.id}`,
-					})
-				);
-
-				const state = await this.getStateOrNull('round');
-
-				/// Checking if the state is in the round
-				if (!state || state.isFinished) {
-					return;
-				}
-
-				/// Getting the scores from the storage
-				const scores: {
-					host: number;
-					guest: number;
-				} = await this.storage.get(StorageKeys.Scores);
-
-				/// Getting the value of the gift
-				///
-				/// If there is an active booster, the value of the gift is modified by the modifier function of the active booster
-				const value = this.activeBoosters[side] ? this.activeBoosters[side]!.modifierFunction(body.value) : body.value;
-
-				/// Checking if the user who sent the gift is the host
-				if (body.livestream.userId == this.hostSession?.user.id) {
-					scores.host += value;
-				}
-
-				/// Checking if the user who sent the gift is the guest
-				if (body.livestream.userId == this.guestSession?.user.id) {
-					scores.guest += value;
-				}
-
-				this.hostSession?.sendToChannel('update-scores', scores);
-
-				await this.storage.set(StorageKeys.Scores, scores);
-
-				/// Updating the user contribution
-				await this.updateUserContribution(body.user.id, value, body.livestream.userId == this.hostSession?.user.id ? 'host' : 'guest');
-
-				await this.addFeedItem(
-					this.buildFeedItem({
-						username: body.user.username,
-						body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
-					})
-				);
-
-				let targetUpdates: Partial<State['round']> | undefined = undefined;
-
-				if (state.target) {
-					targetUpdates = await this.handleTargetUpdates({ user: body.user, side, valueContributed: value });
-
-					this.addFeedItem(
-						this.buildFeedItem({
-							username: body.user.username,
-							body: JSON.stringify(targetUpdates),
-						})
-					);
-				}
-
-				await this.updateState(
-					'round',
-					{
-						scores: scores,
-						leaderboard: await this.getLeaderboard(),
-						...(targetUpdates ?? {}),
-					},
-					true
-				);
-			} catch (e) {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: JSON.stringify(e),
+						body: JSON.stringify(targetUpdates),
 					})
 				);
 			}
+
+			await this.updateState(
+				'round',
+				{
+					scores: scores,
+					leaderboard: await this.getLeaderboard(),
+					...(targetUpdates ?? {}),
+				},
+				true
+			);
 		});
 
 		this.registerEvent('accept-invite', async (game, session) => {
