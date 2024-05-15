@@ -207,7 +207,7 @@ export class Battle extends Game<Env, State, Events> {
 		console.log(state);
 		console.log(feed);
 
-		this.state.set('round', {
+		await this.state.set('round', {
 			scores: {
 				host: 0,
 				guest: 0,
@@ -234,6 +234,8 @@ export class Battle extends Game<Env, State, Events> {
 			isFinished: false,
 			feed,
 		});
+
+		this.hostSession?.sendToChannel('set-double-tapped', false);
 
 		this.storage.setAlarm(async () => {
 			/// round end
@@ -1001,7 +1003,7 @@ export class Battle extends Game<Env, State, Events> {
 		});
 
 		this.registerEvent('user-double-tap', async (game, session, data) => {
-			const usersDoubleTapped: Set<string> = await this.storage.get(StorageKeys.UsersDoubleTapped);
+			const usersDoubleTapped: Set<string> = (await this.storage.get(StorageKeys.UsersDoubleTapped)) ?? new Set<string>();
 
 			if (usersDoubleTapped.has(session.user.id)) {
 				return;
