@@ -53,11 +53,11 @@ export class Battle extends Game<Env, State, Events> {
 	private async updateState<T extends keyof State>(state: T, data: Partial<State[T]>, sync = false) {
 		const currentState = await this.state.get();
 
-		if (currentState.state === state) {
+		if (currentState.state == state) {
 			await this.storage.set('state', {
 				state: state,
 				data: {
-					...(currentState.data as unknown as State[T]),
+					...(currentState.data as State[T]),
 					...data,
 				},
 			});
@@ -333,7 +333,10 @@ export class Battle extends Game<Env, State, Events> {
 					/// Checking if the guest target is reached
 					if (await this.storage.get('guest-target')) {
 						this.timerController.invokeEarly('guest-target-end');
-						this.timerController.invokeEarly('host-target-end');
+
+						setTimeout(() => {
+							this.timerController.invokeEarly('host-target-end');
+						}, 1000);
 
 						return {};
 					} else {
@@ -639,21 +642,18 @@ export class Battle extends Game<Env, State, Events> {
 							);
 
 							try {
-								await this.updateState(
-									'round',
-									{
-										target: {
-											host: null,
-											guest: state.target.guest ?? null,
-										},
-										announcement: {
-											host: null,
-											guest: state.announcement.guest,
-										},
-										booster: this.activeBoosters,
+								await this.state.set('round', {
+									...state,
+									target: {
+										host: null,
+										guest: state.target.guest ?? null,
 									},
-									true
-								);
+									announcement: {
+										host: null,
+										guest: state.announcement.guest,
+									},
+									booster: this.activeBoosters,
+								});
 							} catch (e) {
 								this.addFeedItem(
 									this.buildFeedItem({
