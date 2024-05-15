@@ -427,6 +427,13 @@ export class Battle extends Game<Env, State, Events> {
 	private async getStateOrNull<T extends keyof State>(state: T): Promise<State[T] | null> {
 		const currentState = await this.state.get();
 
+		this.addFeedItem(
+			this.buildFeedItem({
+				username: 'system',
+				body: `current state: ${currentState.state} provided state: ${state}`,
+			})
+		);
+
 		if (currentState.state == state) {
 			return currentState.data as State[T];
 		}
