@@ -1063,7 +1063,6 @@ export class Battle extends Game<Env, State, Events> {
 						state: 'initial',
 						data: {
 							invited: false,
-							title: 'You have invited the guest to the game',
 						},
 					});
 				} else if (session.isGuest) {
@@ -1107,6 +1106,7 @@ export class Battle extends Game<Env, State, Events> {
 				);
 
 				await this.dispose();
+				await this.resetGame();
 			} else {
 				this.addFeedItem(
 					this.buildFeedItem({
@@ -1138,6 +1138,7 @@ export class Battle extends Game<Env, State, Events> {
 					})
 				);
 				await this.dispose();
+				await this.resetGame();
 			} else {
 				this.addFeedItem(
 					this.buildFeedItem({
