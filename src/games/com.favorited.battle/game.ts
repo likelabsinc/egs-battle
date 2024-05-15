@@ -428,28 +428,7 @@ export class Battle extends Game<Env, State, Events> {
 		const currentState = await this.state.get();
 
 		if (currentState.state == state) {
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: 'system',
-					body: `current state: ${currentState.state} provided state: ${state}`,
-				})
-			);
-			try {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `state data: ${currentState.data == undefined || currentState.data == null}`,
-					})
-				);
-				return currentState.data as State[T];
-			} catch (e) {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `state getting exception: ${e}`,
-					})
-				);
-			}
+			return currentState.data as State[T];
 		}
 
 		return null;
@@ -638,30 +617,8 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'host-target-end',
 					durationMs: target.endsAt.getTime() - Date.now(),
 					callback: async () => {
-						this.addFeedItem(
-							this.buildFeedItem({
-								username: 'system',
-								body: `host timer end`,
-							})
-						);
-
 						const target: Target = await this.storage.get('host-target');
-
-						this.addFeedItem(
-							this.buildFeedItem({
-								username: 'system',
-								body: `host target: ${JSON.stringify(target)}`,
-							})
-						);
-
 						const state = await this.getStateOrNull('round');
-
-						this.addFeedItem(
-							this.buildFeedItem({
-								username: 'system',
-								body: `host state: isNull ${state != null} isUndefined: ${state == undefined}`,
-							})
-						);
 
 						if (!state) {
 							return;
@@ -684,42 +641,50 @@ export class Battle extends Game<Env, State, Events> {
 								true
 							);
 						}
+						try {
+							if (target?.currentValue && target?.targetValue) {
+								const hasReached = target?.currentValue >= target?.targetValue;
 
-						if (target?.currentValue && target?.targetValue) {
-							const hasReached = target?.currentValue >= target?.targetValue;
+								if (hasReached) {
+									this.activeBoosters.host = target?.booster;
+									this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
 
-							if (hasReached) {
-								this.activeBoosters.host = target?.booster;
-								this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
+									const pointsBeforeBooster = state.scores.host;
 
-								const pointsBeforeBooster = state.scores.host;
+									this.createBooster(this.activeBoosters.host!, Side.host, async () => {
+										const scores: {
+											host: number;
+											guest: number;
+										} = await this.storage.get(StorageKeys.Scores);
+										const state = await this.getStateOrNull('round');
 
-								this.createBooster(this.activeBoosters.host!, Side.host, async () => {
-									const scores: {
-										host: number;
-										guest: number;
-									} = await this.storage.get(StorageKeys.Scores);
-									const state = await this.getStateOrNull('round');
+										const pointsEarnedDuringBoost = scores.host - pointsBeforeBooster;
+										const announcement = {
+											text: 'total match points: ',
+											durationMs: 5000,
+											trailingText: pointsEarnedDuringBoost.toString(),
+										};
 
-									const pointsEarnedDuringBoost = scores.host - pointsBeforeBooster;
-									const announcement = {
-										text: 'total match points: ',
-										durationMs: 5000,
-										trailingText: pointsEarnedDuringBoost.toString(),
-									};
-
-									await this.updateState(
-										'round',
-										{
-											announcement: {
-												host: announcement,
-												guest: state?.announcement.guest ?? null,
+										await this.updateState(
+											'round',
+											{
+												announcement: {
+													host: announcement,
+													guest: state?.announcement.guest ?? null,
+												},
 											},
-										},
-										true
-									);
-								});
+											true
+										);
+									});
+								}
 							}
+						} catch (e) {
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: JSON.stringify(e),
+								})
+							);
 						}
 					},
 				});
