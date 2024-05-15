@@ -742,6 +742,14 @@ export class Battle extends Game<Env, State, Events> {
 						durationMs: 3000,
 					};
 
+					await this.state.set('round', {
+						...(state as State['round']),
+						target: {
+							host: null,
+							guest: null,
+						},
+					});
+
 					this.createAnnouncement({
 						announcement: didntReachAnnouncement,
 						side: Side.both,
