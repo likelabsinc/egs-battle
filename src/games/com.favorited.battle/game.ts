@@ -435,6 +435,12 @@ export class Battle extends Game<Env, State, Events> {
 				})
 			);
 			try {
+				this.addFeedItem(
+					this.buildFeedItem({
+						username: 'system',
+						body: `state data: ${JSON.stringify(currentState.data)}`,
+					})
+				);
 				return currentState.data as State[T];
 			} catch (e) {
 				this.addFeedItem(
