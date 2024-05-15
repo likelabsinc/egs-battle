@@ -1068,13 +1068,13 @@ export class Battle extends Game<Env, State, Events> {
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
-					body: `left the game! ${JSON.stringify(session)}`,
+					body: `left the game! ${session.role}`,
 				})
 			);
 
 			if (!session.isStreamer || !session.isGuest) return;
 
-			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
+			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
 			if (!session.isStreamer) return;
 			await this.resetGame();
@@ -1089,13 +1089,11 @@ export class Battle extends Game<Env, State, Events> {
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
-					body: `left the game! ${JSON.stringify(session)}`,
+					body: `left the game! ${session.role}`,
 				})
 			);
 
-			if (!session.isStreamer || !session.isGuest) return;
-
-			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
+			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
 			if (!session.isStreamer) return;
 			await this.resetGame();
