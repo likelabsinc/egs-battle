@@ -621,26 +621,49 @@ export class Battle extends Game<Env, State, Events> {
 						const state = await this.getStateOrNull('round');
 
 						if (!state) {
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `error: state is null`,
+								})
+							);
 							return;
 						}
 
 						if (!target) {
-							await this.updateState(
-								'round',
-								{
-									target: {
-										host: null,
-										guest: state.target.guest ?? null,
-									},
-									announcement: {
-										host: null,
-										guest: state.announcement.guest,
-									},
-									booster: this.activeBoosters,
-								},
-								true
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `error: target not found`,
+								})
 							);
+
+							try {
+								await this.updateState(
+									'round',
+									{
+										target: {
+											host: null,
+											guest: state.target.guest ?? null,
+										},
+										announcement: {
+											host: null,
+											guest: state.announcement.guest,
+										},
+										booster: this.activeBoosters,
+									},
+									true
+								);
+							} catch (e) {
+								this.addFeedItem(
+									this.buildFeedItem({
+										username: 'system',
+										body: `error timer target: ${JSON.stringify(e)}`,
+									})
+								);
+							}
 						}
+
 						try {
 							if (target?.currentValue && target?.targetValue) {
 								const hasReached = target?.currentValue >= target?.targetValue;
@@ -682,7 +705,7 @@ export class Battle extends Game<Env, State, Events> {
 							this.addFeedItem(
 								this.buildFeedItem({
 									username: 'system',
-									body: JSON.stringify(e),
+									body: `error: ${JSON.stringify(e)}`,
 								})
 							);
 						}
@@ -954,7 +977,7 @@ export class Battle extends Game<Env, State, Events> {
 				this.addFeedItem(
 					this.buildFeedItem({
 						username: body.user.username,
-						body: JSON.stringify(targetUpdates),
+						body: `target updates: ${JSON.stringify(targetUpdates)}`,
 					})
 				);
 			}
