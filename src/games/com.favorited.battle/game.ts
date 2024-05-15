@@ -347,6 +347,7 @@ export class Battle extends Game<Env, State, Events> {
 								host: {
 									text: 'target reached',
 									durationMs: 30000,
+									backgroundColor: '#ffff4e6a',
 								},
 								guest: state.announcement?.guest ?? null,
 							},
@@ -373,6 +374,7 @@ export class Battle extends Game<Env, State, Events> {
 								guest: {
 									text: 'target reached',
 									durationMs: 30000,
+									backgroundColor: '#ffff4e6a',
 								},
 							},
 						};
@@ -383,13 +385,6 @@ export class Battle extends Game<Env, State, Events> {
 		} else {
 			switch (args.side) {
 				case Side.host:
-					this.addFeedItem(
-						this.buildFeedItem({
-							username: args.user.username,
-							body: `serving results to the ${args.side} target: ${target.currentValue}/${target.targetValue}`,
-						})
-					);
-
 					return {
 						target: {
 							host: target,
@@ -397,13 +392,6 @@ export class Battle extends Game<Env, State, Events> {
 						},
 					};
 				case Side.guest:
-					this.addFeedItem(
-						this.buildFeedItem({
-							username: args.user.username,
-							body: `serving results to the ${args.side} target: ${target.currentValue}/${target.targetValue}`,
-						})
-					);
-
 					return {
 						target: {
 							host: state.target?.host,
