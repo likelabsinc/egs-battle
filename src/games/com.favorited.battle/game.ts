@@ -1065,14 +1065,13 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
+			if (!session.isStreamer || !session.isGuest) return;
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
 					body: `left the game!`,
 				})
 			);
-			if (!session.isStreamer || !session.isGuest) return;
-
 			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
 
 			if (!session.isStreamer) return;
@@ -1085,14 +1084,13 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event disconnect - When the user closes the game.
 		 */
 		this.registerEvent('disconnect', async (game, session) => {
+			if (!session.isStreamer || !session.isGuest) return;
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
 					body: `left the game!`,
 				})
 			);
-			if (!session.isStreamer || !session.isGuest) return;
-
 			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
 
 			if (!session.isStreamer) return;
