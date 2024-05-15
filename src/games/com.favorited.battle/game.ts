@@ -336,7 +336,7 @@ export class Battle extends Game<Env, State, Events> {
 
 						setTimeout(() => {
 							this.timerController.invokeEarly('host-target-end');
-						}, 1000);
+						}, 500);
 
 						return {};
 					} else {
@@ -618,7 +618,7 @@ export class Battle extends Game<Env, State, Events> {
 
 				this.timerController.addTimer({
 					id: 'host-target-end',
-					durationMs: target.endsAt.getTime() - Date.now(),
+					durationMs: target.endsAt.getTime() - Date.now() + 500,
 					callback: async () => {
 						const target: Target = await this.storage.get('host-target');
 						const state = await this.getStateOrNull('round');
