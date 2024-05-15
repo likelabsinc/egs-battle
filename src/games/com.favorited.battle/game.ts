@@ -739,11 +739,17 @@ export class Battle extends Game<Env, State, Events> {
 
 						/// Checking if the target is null, if null - target not reached
 						if (!target) {
+							this.addFeedItem(
+								this.buildFeedItem({
+									username: 'system',
+									body: `guest target not reached`,
+								})
+							);
 							await this.updateState(
 								'round',
 								{
 									target: {
-										host: state.target.host ?? null,
+										host: null,
 										guest: null,
 									},
 									announcement: {
