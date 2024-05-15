@@ -960,13 +960,6 @@ export class Battle extends Game<Env, State, Events> {
 
 			if (state.target.host || state.target.guest) {
 				targetUpdates = await this.handleTargetUpdates({ user: body.user, side, valueContributed: value });
-
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: body.user.username,
-						body: `target updates: ${JSON.stringify(targetUpdates)}`,
-					})
-				);
 			}
 
 			await this.updateState(
@@ -1116,6 +1109,13 @@ export class Battle extends Game<Env, State, Events> {
 	}
 
 	private async maybeForfeit(side: Side) {
+		this.addFeedItem(
+			this.buildFeedItem({
+				username: side == Side.host ? this.guestSession?.user.username : this.hostSession?.user.username,
+				body: `left the game!`,
+			})
+		);
+
 		const state = await this.getStateOrNull('round');
 
 		if (!state) {
