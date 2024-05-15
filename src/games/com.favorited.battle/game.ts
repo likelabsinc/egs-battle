@@ -438,7 +438,7 @@ export class Battle extends Game<Env, State, Events> {
 				this.addFeedItem(
 					this.buildFeedItem({
 						username: 'system',
-						body: `state data: ${JSON.stringify(currentState.data)}`,
+						body: `state data: ${currentState.data == undefined || currentState.data == null}`,
 					})
 				);
 				return currentState.data as State[T];
