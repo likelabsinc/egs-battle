@@ -1063,7 +1063,9 @@ export class Battle extends Game<Env, State, Events> {
 
 			this.storage.clear();
 
-			this.startGame();
+			this.state.set('initial', {
+				invited: false,
+			});
 		});
 
 		/**
