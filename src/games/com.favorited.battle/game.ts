@@ -1057,8 +1057,31 @@ export class Battle extends Game<Env, State, Events> {
 
 			this.storage.clear();
 
-			this.state.set('initial', {
-				invited: false,
+			this.connectedSessions.forEach((session) => {
+				if (session.isStreamer) {
+					session.send('set-state', {
+						state: 'initial',
+						data: {
+							invited: false,
+							title: 'You have invited the guest to the game',
+						},
+					});
+				} else if (session.isGuest) {
+					session.send('set-state', {
+						state: 'initial',
+						data: {
+							invited: false,
+							title: 'You have been invited to the rematch',
+						},
+					});
+				} else {
+					session.send('set-state', {
+						state: 'initial',
+						data: {
+							invited: false,
+						},
+					});
+				}
 			});
 		});
 
