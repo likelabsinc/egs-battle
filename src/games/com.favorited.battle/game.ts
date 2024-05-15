@@ -1107,7 +1107,6 @@ export class Battle extends Game<Env, State, Events> {
 				);
 
 				await this.dispose();
-				await this.resetGame();
 			} else {
 				this.addFeedItem(
 					this.buildFeedItem({
@@ -1139,7 +1138,6 @@ export class Battle extends Game<Env, State, Events> {
 					})
 				);
 				await this.dispose();
-				await this.resetGame();
 			} else {
 				this.addFeedItem(
 					this.buildFeedItem({
