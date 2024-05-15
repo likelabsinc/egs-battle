@@ -1072,6 +1072,10 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
+			if (!session.isStreamer || !session.isGuest) return;
+
+			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
+
 			if (!session.isStreamer) return;
 			await this.resetGame();
 
@@ -1082,6 +1086,10 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event disconnect - When the user closes the game.
 		 */
 		this.registerEvent('disconnect', async (game, session) => {
+			if (!session.isStreamer || !session.isGuest) return;
+
+			this.maybeForfeit(session.isGuest ? Side.host : Side.guest);
+
 			if (!session.isStreamer) return;
 			await this.resetGame();
 
@@ -1105,6 +1113,38 @@ export class Battle extends Game<Env, State, Events> {
 				})
 			);
 		}
+	}
+
+	private async maybeForfeit(side: Side) {
+		const state = await this.getStateOrNull('round');
+
+		if (!state) {
+			return;
+		}
+
+		const isRoundActive = state.endsAt.getTime() > Date.now();
+
+		if (!isRoundActive) {
+			return;
+		}
+
+		const winner = side == Side.host ? 'guest' : 'host';
+
+		await this.env.winStreaks.put(winner === 'guest' ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
+		await this.state.set('round', {
+			...(state as State['round']),
+			winner: winner,
+			isFinished: true,
+			winStreaks: await this.getStreaks(),
+			endsAt: new Date(Date.now() + kVictoryLapDuration),
+		});
+
+		this.addFeedItem(
+			this.buildFeedItem({
+				username: winner == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username,
+				body: `won this round, ${winner == 'host' ? 'guest' : 'host'} left the game!`,
+			})
+		);
 	}
 
 	private async disposeBooster() {
