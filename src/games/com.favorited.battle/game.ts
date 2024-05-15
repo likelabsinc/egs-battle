@@ -232,6 +232,7 @@ export class Battle extends Game<Env, State, Events> {
 			endsAt: new Date(Date.now() + kRoundDuration),
 			winner: null,
 			isFinished: false,
+			isForfeited: false,
 			feed,
 		});
 
@@ -1072,11 +1073,9 @@ export class Battle extends Game<Env, State, Events> {
 				})
 			);
 
-			if (!session.isStreamer || !session.isGuest) return;
-
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
-			if (!session.isStreamer) return;
+			if (session.role != 'streamer') return;
 			await this.resetGame();
 
 			await this.dispose();
@@ -1095,7 +1094,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
-			if (!session.isStreamer) return;
+			if (session.role != 'streamer') return;
 			await this.resetGame();
 
 			await this.dispose();
@@ -1140,6 +1139,8 @@ export class Battle extends Game<Env, State, Events> {
 			return;
 		}
 
+		this.storage.cancelAlarm();
+
 		const winner = side == Side.host ? 'guest' : 'host';
 
 		await this.env.winStreaks.put(winner === 'guest' ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
@@ -1147,6 +1148,7 @@ export class Battle extends Game<Env, State, Events> {
 			...(state as State['round']),
 			winner: winner,
 			isFinished: true,
+			isForfeited: true,
 			winStreaks: await this.getStreaks(),
 			endsAt: new Date(Date.now() + kVictoryLapDuration),
 		});

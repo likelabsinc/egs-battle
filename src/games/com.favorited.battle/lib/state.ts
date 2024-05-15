@@ -40,6 +40,7 @@ export interface State {
 		};
 		endsAt: Date;
 		winner: 'host' | 'guest' | 'draw' | null;
+		isForfeited: boolean;
 		isFinished: boolean;
 		feed: FeedItem[];
 	};
