@@ -1066,8 +1066,6 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
-			await this.dispose();
-
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
@@ -1078,17 +1076,15 @@ export class Battle extends Game<Env, State, Events> {
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
 			if (session.role != 'streamer') return;
-			await this.resetGame();
 
 			await this.dispose();
+			await this.resetGame();
 		});
 
 		/**
 		 * @event disconnect - When the user closes the game.
 		 */
 		this.registerEvent('disconnect', async (game, session) => {
-			await this.dispose();
-
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
@@ -1099,9 +1095,8 @@ export class Battle extends Game<Env, State, Events> {
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
 			if (session.role != 'streamer') return;
-			await this.resetGame();
-
 			await this.dispose();
+			await this.resetGame();
 		});
 	}
 
@@ -1155,6 +1150,10 @@ export class Battle extends Game<Env, State, Events> {
 			isForfeited: true,
 			winStreaks: await this.getStreaks(),
 			endsAt: new Date(Date.now() + kVictoryLapDuration),
+			announcement: {
+				host: winner == 'host' ? { text: 'opponent forfeited', durationMs: 3000 } : null,
+				guest: winner == 'guest' ? { text: 'opponent forfeited', durationMs: 3000 } : null,
+			},
 		});
 
 		this.addFeedItem(
