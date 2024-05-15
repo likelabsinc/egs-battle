@@ -1075,10 +1075,10 @@ export class Battle extends Game<Env, State, Events> {
 
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
-			if (session.role != 'streamer') return;
-
-			await this.dispose();
-			await this.resetGame();
+			if (session.role == 'streamer') {
+				await this.dispose();
+				await this.resetGame();
+			}
 		});
 
 		/**
@@ -1094,9 +1094,10 @@ export class Battle extends Game<Env, State, Events> {
 
 			this.maybeForfeit(session.role == 'guest' ? Side.host : Side.guest);
 
-			if (session.role != 'streamer') return;
-			await this.dispose();
-			await this.resetGame();
+			if (session.role == 'streamer') {
+				await this.dispose();
+				await this.resetGame();
+			}
 		});
 	}
 
@@ -1159,7 +1160,7 @@ export class Battle extends Game<Env, State, Events> {
 		this.addFeedItem(
 			this.buildFeedItem({
 				username: winner == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username,
-				body: `won this round, ${winner == 'host' ? 'guest' : 'host'} left the game!`,
+				body: `won this round, ${side} left the game!`,
 			})
 		);
 	}
