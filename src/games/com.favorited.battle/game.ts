@@ -1066,6 +1066,8 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event bloc.close - When the user closes the game.
 		 */
 		this.registerEvent('bloc.close', async (game, session) => {
+			await this.dispose();
+
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
@@ -1085,6 +1087,8 @@ export class Battle extends Game<Env, State, Events> {
 		 * @event disconnect - When the user closes the game.
 		 */
 		this.registerEvent('disconnect', async (game, session) => {
+			await this.dispose();
+
 			this.addFeedItem(
 				this.buildFeedItem({
 					username: session.user.username,
