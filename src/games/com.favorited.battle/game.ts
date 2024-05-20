@@ -19,6 +19,8 @@ export class Battle extends Game<Env, State, Events> {
 	private boosterTimer: number | null = null;
 	private boosterDelayTimer: number | null = null;
 
+	private mounted: boolean = false;
+
 	private activeBoosters: {
 		host: Booster | null;
 		guest: Booster | null;
@@ -1177,6 +1179,8 @@ export class Battle extends Game<Env, State, Events> {
 			this.timerController.clear();
 			this.disposeBooster();
 
+			this.mounted = false;
+
 			await this.state.set('initial', {
 				invited: false,
 			});
@@ -1267,7 +1271,9 @@ export class Battle extends Game<Env, State, Events> {
 
 		this.chatActions.restoreForSession(session);
 
-		if (!state) {
+		if (!state || this.mounted === false) {
+			this.mounted = true;
+
 			await this.state.set('initial', {
 				invited: false,
 			});
