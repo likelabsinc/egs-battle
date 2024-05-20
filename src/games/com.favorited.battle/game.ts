@@ -333,7 +333,7 @@ export class Battle extends Game<Env, State, Events> {
 
 					/// Checking if the guest target is reached
 					if (await this.storage.get('guest-target')) {
-						this.timerController.invokeEarly('both-target-end');
+						this.timerController.invokeEarly('target-end');
 
 						return {};
 					} else {
@@ -359,7 +359,7 @@ export class Battle extends Game<Env, State, Events> {
 
 					/// Checking if the host target is reached
 					if (await this.storage.get('host-target')) {
-						this.timerController.invokeEarly('both-target-end');
+						this.timerController.invokeEarly('target-end');
 
 						return {};
 					} else {
@@ -642,6 +642,10 @@ export class Battle extends Game<Env, State, Events> {
 									host: announcement,
 									guest: state?.announcement.guest ?? null,
 								},
+								target: {
+									host: null,
+									guest: null,
+								},
 							},
 							true
 						);
@@ -674,6 +678,10 @@ export class Battle extends Game<Env, State, Events> {
 								announcement: {
 									host: state?.announcement.host ?? null,
 									guest: announcement,
+								},
+								target: {
+									host: null,
+									guest: null,
 								},
 							},
 							true
@@ -744,6 +752,13 @@ export class Battle extends Game<Env, State, Events> {
 						side: Side.both,
 					});
 				}
+
+				await this.updateState('round', {
+					target: {
+						host: null,
+						guest: null,
+					},
+				});
 			},
 		});
 	}
