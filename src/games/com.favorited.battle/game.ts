@@ -247,9 +247,13 @@ export class Battle extends Game<Env, State, Events> {
 			id: 'anti-sniping-timer-override',
 			durationMs: kRoundDuration,
 			callback: async () => {
-				this.updateState('round', {
-					timerTextOverride: 'time is up!',
-				});
+				this.updateState(
+					'round',
+					{
+						timerTextOverride: 'time is up!',
+					},
+					true
+				);
 			},
 		});
 
@@ -277,6 +281,7 @@ export class Battle extends Game<Env, State, Events> {
 				...(state.data as unknown as State['round']),
 				winner: winner,
 				isFinished: true,
+				timerTextOverride: null,
 				winStreaks: await this.getStreaks(),
 				endsAt: new Date(Date.now() + kVictoryLapDuration),
 			});
