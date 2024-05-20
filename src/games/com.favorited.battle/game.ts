@@ -54,6 +54,10 @@ export class Battle extends Game<Env, State, Events> {
 		const currentState = await this.state.get();
 
 		if (currentState.state == state) {
+			console.log('updating state', {
+				...(currentState.data as State[T]),
+				...data,
+			});
 			await this.storage.set('state', {
 				state: state,
 				data: {
@@ -151,6 +155,28 @@ export class Battle extends Game<Env, State, Events> {
 							},
 							side: Side.both,
 							onAnnouncementEnd: async () => {
+								setTimeout(async () => {
+									this.updateState(
+										'round',
+										(await this.handleTargetUpdates({
+											user: this.hostSession!.user,
+											side: Side.guest,
+											valueContributed: 5,
+										})) ?? {},
+										true
+									);
+								}, 2000);
+								setTimeout(async () => {
+									this.updateState(
+										'round',
+										(await this.handleTargetUpdates({
+											user: this.hostSession!.user,
+											side: Side.host,
+											valueContributed: 5,
+										})) ?? {},
+										true
+									);
+								}, 3000);
 								///
 								/// TODO: figure out the logic of showing value or gifter challenge
 								///
@@ -612,7 +638,7 @@ export class Battle extends Game<Env, State, Events> {
 					return;
 				}
 
-				const didntReachAnnouncement = {
+				const didntReachAnnouncement: Announcement = {
 					text: 'target not reached',
 					durationMs: 3000,
 				};
@@ -658,11 +684,6 @@ export class Battle extends Game<Env, State, Events> {
 				}
 
 				if (!hasHostReached && hasGuestReached) {
-					this.createAnnouncement({
-						announcement: didntReachAnnouncement,
-						side: Side.host,
-					});
-
 					this.activeBoosters.guest = guestTarget.booster;
 					this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
 
@@ -743,20 +764,25 @@ export class Battle extends Game<Env, State, Events> {
 					});
 				}
 
-				await this.updateState(
-					'round',
-					{
-						announcement: {
-							host: hasHostReached ? null : didntReachAnnouncement,
-							guest: hasGuestReached ? null : didntReachAnnouncement,
+				console.log('hasHostReached', hasHostReached);
+				console.log('hasGuestReached', hasGuestReached);
+
+				setTimeout(async () => {
+					await this.updateState(
+						'round',
+						{
+							announcement: {
+								host: hasHostReached ? null : didntReachAnnouncement,
+								guest: hasGuestReached ? null : didntReachAnnouncement,
+							},
+							target: {
+								host: null,
+								guest: null,
+							},
 						},
-						target: {
-							host: null,
-							guest: null,
-						},
-					},
-					true
-				);
+						true
+					);
+				}, 1000);
 			},
 		});
 	}
