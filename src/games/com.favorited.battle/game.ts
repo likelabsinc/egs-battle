@@ -743,16 +743,20 @@ export class Battle extends Game<Env, State, Events> {
 					});
 				}
 
-				await this.updateState('round', {
-					announcement: {
-						host: hasHostReached ? null : didntReachAnnouncement,
-						guest: hasGuestReached ? null : didntReachAnnouncement,
+				await this.updateState(
+					'round',
+					{
+						announcement: {
+							host: hasHostReached ? null : didntReachAnnouncement,
+							guest: hasGuestReached ? null : didntReachAnnouncement,
+						},
+						target: {
+							host: null,
+							guest: null,
+						},
 					},
-					target: {
-						host: null,
-						guest: null,
-					},
-				});
+					true
+				);
 			},
 		});
 	}
