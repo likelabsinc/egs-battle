@@ -751,11 +751,6 @@ export class Battle extends Game<Env, State, Events> {
 							guest: null,
 						},
 					});
-
-					this.createAnnouncement({
-						announcement: didntReachAnnouncement,
-						side: Side.both,
-					});
 				}
 
 				await this.updateState('round', {
