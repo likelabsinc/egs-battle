@@ -809,6 +809,8 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'host-booster-end',
 					durationMs: booster.durationInMs,
 					callback: async () => {
+						this.activeBoosters.host = null;
+
 						await this.updateState('round', {
 							announcement: {
 								host: null,
@@ -845,6 +847,8 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'guest-booster-end',
 					durationMs: booster.durationInMs,
 					callback: async () => {
+						this.activeBoosters.guest = null;
+
 						await this.updateState('round', {
 							booster: {
 								host: state.booster.host,
@@ -877,6 +881,9 @@ export class Battle extends Game<Env, State, Events> {
 					id: 'both-booster-end',
 					durationMs: booster.durationInMs,
 					callback: async () => {
+						this.activeBoosters.guest = null;
+						this.activeBoosters.host = null;
+
 						await this.updateState(
 							'round',
 							{
