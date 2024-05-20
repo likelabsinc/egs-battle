@@ -237,10 +237,21 @@ export class Battle extends Game<Env, State, Events> {
 			winner: null,
 			isFinished: false,
 			isForfeited: false,
+			timerTextOverride: null,
 			feed,
 		});
 
 		this.hostSession?.sendToChannel('set-double-tapped', false);
+
+		this.timerController.addTimer({
+			id: 'anti-sniping-timer-override',
+			durationMs: kRoundDuration,
+			callback: async () => {
+				this.updateState('round', {
+					timerTextOverride: 'time is up!',
+				});
+			},
+		});
 
 		this.storage.setAlarm(async () => {
 			/// round end
@@ -276,7 +287,7 @@ export class Battle extends Game<Env, State, Events> {
 					body: winner == 'draw' ? 'It`s draw!' : `won this round!`,
 				})
 			);
-		}, kRoundDuration);
+		}, kRoundDuration + 3000);
 	};
 
 	private async handleTargetUpdates(args: {

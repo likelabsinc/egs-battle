@@ -39,6 +39,7 @@ export interface State {
 			host: Announcement | null;
 			guest: Announcement | null;
 		};
+		timerTextOverride: string | null;
 		endsAt: Date;
 		winner: 'host' | 'guest' | 'draw' | null;
 		isForfeited: boolean;
