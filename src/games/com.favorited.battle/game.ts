@@ -743,16 +743,6 @@ export class Battle extends Game<Env, State, Events> {
 					});
 				}
 
-				if (!hasHostReached && !hasGuestReached) {
-					await this.state.set('round', {
-						...(state as State['round']),
-						target: {
-							host: null,
-							guest: null,
-						},
-					});
-				}
-
 				await this.updateState('round', {
 					announcement: {
 						host: hasHostReached ? null : didntReachAnnouncement,
