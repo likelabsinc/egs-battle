@@ -155,28 +155,6 @@ export class Battle extends Game<Env, State, Events> {
 							},
 							side: Side.both,
 							onAnnouncementEnd: async () => {
-								setTimeout(async () => {
-									this.updateState(
-										'round',
-										(await this.handleTargetUpdates({
-											user: this.hostSession!.user,
-											side: Side.guest,
-											valueContributed: 5,
-										})) ?? {},
-										true
-									);
-								}, 2000);
-								setTimeout(async () => {
-									this.updateState(
-										'round',
-										(await this.handleTargetUpdates({
-											user: this.hostSession!.user,
-											side: Side.host,
-											valueContributed: 5,
-										})) ?? {},
-										true
-									);
-								}, 3000);
 								///
 								/// TODO: figure out the logic of showing value or gifter challenge
 								///
@@ -767,22 +745,26 @@ export class Battle extends Game<Env, State, Events> {
 				console.log('hasHostReached', hasHostReached);
 				console.log('hasGuestReached', hasGuestReached);
 
-				setTimeout(async () => {
-					await this.updateState(
-						'round',
-						{
-							announcement: {
-								host: hasHostReached ? null : didntReachAnnouncement,
-								guest: hasGuestReached ? null : didntReachAnnouncement,
+				this.timerController.addTimer({
+					id: 'target-update-delay',
+					durationMs: 1000,
+					callback: async () => {
+						await this.updateState(
+							'round',
+							{
+								announcement: {
+									host: hasHostReached ? null : didntReachAnnouncement,
+									guest: hasGuestReached ? null : didntReachAnnouncement,
+								},
+								target: {
+									host: null,
+									guest: null,
+								},
 							},
-							target: {
-								host: null,
-								guest: null,
-							},
-						},
-						true
-					);
-				}, 1000);
+							true
+						);
+					},
+				});
 			},
 		});
 	}
