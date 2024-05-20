@@ -612,10 +612,20 @@ export class Battle extends Game<Env, State, Events> {
 					return;
 				}
 
+				const didntReachAnnouncement = {
+					text: 'target not reached',
+					durationMs: 3000,
+				};
+
 				let hasHostReached = hostTarget && hostTarget.currentValue >= hostTarget.targetValue;
 				let hasGuestReached = guestTarget && guestTarget.currentValue >= guestTarget.targetValue;
 
 				if (hasHostReached && !hasGuestReached) {
+					this.createAnnouncement({
+						announcement: didntReachAnnouncement,
+						side: Side.guest,
+					});
+
 					this.activeBoosters.host = hostTarget.booster;
 					this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
 
@@ -653,6 +663,11 @@ export class Battle extends Game<Env, State, Events> {
 				}
 
 				if (!hasHostReached && hasGuestReached) {
+					this.createAnnouncement({
+						announcement: didntReachAnnouncement,
+						side: Side.host,
+					});
+
 					this.activeBoosters.guest = guestTarget.booster;
 					this.activeBoosters.guest!.endsAt = new Date(Date.now() + this.activeBoosters.guest!.durationInMs);
 
@@ -734,11 +749,6 @@ export class Battle extends Game<Env, State, Events> {
 				}
 
 				if (!hasHostReached && !hasGuestReached) {
-					const didntReachAnnouncement = {
-						text: 'target not reached',
-						durationMs: 3000,
-					};
-
 					await this.state.set('round', {
 						...(state as State['round']),
 						target: {
