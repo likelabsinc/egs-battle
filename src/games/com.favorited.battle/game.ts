@@ -621,11 +621,6 @@ export class Battle extends Game<Env, State, Events> {
 				let hasGuestReached = guestTarget && guestTarget.currentValue >= guestTarget.targetValue;
 
 				if (hasHostReached && !hasGuestReached) {
-					this.createAnnouncement({
-						announcement: didntReachAnnouncement,
-						side: Side.guest,
-					});
-
 					this.activeBoosters.host = hostTarget.booster;
 					this.activeBoosters.host!.endsAt = new Date(Date.now() + this.activeBoosters.host!.durationInMs);
 
@@ -764,6 +759,10 @@ export class Battle extends Game<Env, State, Events> {
 				}
 
 				await this.updateState('round', {
+					announcement: {
+						host: hasHostReached ? null : didntReachAnnouncement,
+						guest: hasGuestReached ? null : didntReachAnnouncement,
+					},
 					target: {
 						host: null,
 						guest: null,
