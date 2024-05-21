@@ -1208,9 +1208,7 @@ export class Battle extends Game<Env, State, Events> {
 			return;
 		}
 
-		const isRoundActive = state.endsAt.getTime() > Date.now();
-
-		if (!isRoundActive) {
+		if (state.isFinished) {
 			return;
 		}
 
