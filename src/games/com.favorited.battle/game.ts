@@ -204,7 +204,7 @@ export class Battle extends Game<Env, State, Events> {
 		this.winStreaks = await this.getStreaks();
 
 		/// random between 60000 (4m left) and 150000 (2.5m left)
-		this.startBoosterSchedule(Math.random() * 90000 + 60000);
+		this.startBoosterSchedule(Math.floor(Math.random() * 90000 + 60000));
 		// this.startBoosterSchedule(Math.random() * 2000);
 
 		await this.storage.set(StorageKeys.Scores, { host: 0, guest: 0 });
