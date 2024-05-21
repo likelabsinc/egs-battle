@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 120 * 1000;
+const kRoundDuration = 300 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kDoubleTapValue = 3;
 
@@ -136,6 +136,10 @@ export class Battle extends Game<Env, State, Events> {
 
 	private startBoosterSchedule = async (delayInMs: number) => {
 		/// TODO: Implement the booster schedule
+		///
+		/// TODO: figure out the logic of showing value or gifter challenge
+		///
+		const valueChallenge = Math.random() > 0.5;
 
 		this.timerController.addTimer({
 			id: 'target-delay',
@@ -146,7 +150,7 @@ export class Battle extends Game<Env, State, Events> {
 						text: 'speed challenge',
 						durationMs: 3000,
 
-						trailingText: '30s',
+						trailingText: valueChallenge ? '30s' : '40s',
 					},
 					side: Side.both,
 					onAnnouncementEnd: async () => {
@@ -157,33 +161,32 @@ export class Battle extends Game<Env, State, Events> {
 							},
 							side: Side.both,
 							onAnnouncementEnd: async () => {
-								///
-								/// TODO: figure out the logic of showing value or gifter challenge
-								///
-								this.createTarget(
-									{
-										title: 'speed challenge',
-										type: TargetType.score,
-										// targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
-										targetValue: 5,
-										currentValue: 0,
-										endsAt: new Date(Date.now() + 15000),
-										booster: await this.getScheduledBooster(),
-									},
-									Side.both
-								);
-
-								// this.createTarget(
-								// 	{
-								// 		title: 'gifter challenge',
-								// 		type: TargetType.uniqueUsers,
-								// 		targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
-								// 		currentValue: 0,
-								// 		endsAt: new Date(Date.now() + 40000),
-								// 		booster: await this.getScheduledBooster(),
-								// 	},
-								// 	Side.both
-								// );
+								if (valueChallenge) {
+									this.createTarget(
+										{
+											title: 'speed challenge',
+											type: TargetType.score,
+											targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+											// targetValue: 5,
+											currentValue: 0,
+											endsAt: new Date(Date.now() + 30000),
+											booster: await this.getScheduledBooster(),
+										},
+										Side.both
+									);
+								} else {
+									this.createTarget(
+										{
+											title: 'gifter challenge',
+											type: TargetType.uniqueUsers,
+											targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
+											currentValue: 0,
+											endsAt: new Date(Date.now() + 40000),
+											booster: await this.getScheduledBooster(),
+										},
+										Side.both
+									);
+								}
 							},
 						});
 					},
