@@ -1233,7 +1233,7 @@ export class Battle extends Game<Env, State, Events> {
 
 		const winner = side == Side.host ? 'guest' : 'host';
 
-		await this.env.winStreaks.put(winner === 'guest' ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
+		await this.env.winStreaks.put(side == Side.guest ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
 		await this.state.set('round', {
 			...(state as State['round']),
 			winner: winner,
