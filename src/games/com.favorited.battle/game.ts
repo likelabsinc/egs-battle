@@ -781,6 +781,23 @@ export class Battle extends Game<Env, State, Events> {
 							},
 							true
 						);
+
+						this.timerController.addTimer({
+							id: 'not-reached-announcement-disappear-timer',
+							durationMs: 3500,
+							callback: async () => {
+								await this.updateState(
+									'round',
+									{
+										announcement: {
+											host: null,
+											guest: null,
+										},
+									},
+									true
+								);
+							},
+						});
 					},
 				});
 			},
