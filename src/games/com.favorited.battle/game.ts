@@ -139,7 +139,10 @@ export class Battle extends Game<Env, State, Events> {
 		///
 		/// TODO: figure out the logic of showing value or gifter challenge
 		///
-		const valueChallenge = Math.random() > 0.5;
+		const max = 100;
+		const min = 0;
+		const chance = 50;
+		const valueChallenge = (Math.floor(Math.pow(10, 14) * Math.random() * Math.random()) % (max - min + 1)) + min > 50;
 
 		this.timerController.addTimer({
 			id: 'target-delay',
