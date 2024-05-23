@@ -26,9 +26,10 @@ export class TimerController {
 		});
 
 		/// remove timer from map after durationMs
-		this.addTimer({
-			id: `${args.id}-cleaner`,
-			durationMs: args.durationMs,
+		this.timers.set(`${args.id}-cleaner`, {
+			timerId: setTimeout(() => {
+				this.timers.delete(args.id);
+			}, args.durationMs),
 			callback: () => this.timers.delete(args.id),
 		});
 	}
@@ -37,15 +38,11 @@ export class TimerController {
 		return this.timers.has(id);
 	}
 
-	removeTimer(id: string, cleaner: boolean = false) {
+	removeTimer(id: string) {
 		if (this.timers.has(id)) {
 			clearTimeout(this.timers.get(id)!.timerId);
 
 			this.timers.delete(id);
-
-			if (!cleaner) {
-				this.removeTimer(`${id}-cleaner`, true);
-			}
 		}
 	}
 

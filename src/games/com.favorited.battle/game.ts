@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 45 * 1000;
+const kRoundDuration = 300 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kDoubleTapValue = 3;
 
@@ -283,78 +283,61 @@ export class Battle extends Game<Env, State, Events> {
 			}
 
 			if (winner === 'draw') {
-				// const extraTimeAnnouncement: Announcement = {
-				// 	text: 'extra time',
-				// 	durationMs: 3000,
-				// };
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: 'It is a draw!',
-					})
-				);
+				const extraTimeAnnouncement: Announcement = {
+					text: 'extra time',
+					durationMs: 5000,
+					backgroundColor: '#ffff4e6a',
+				};
 
-				try {
-					this.state.set('round', {
-						...(state.data as State['round']),
+				this.updateState(
+					'round',
+					{
 						timerTextOverride: null,
 						endsAt: new Date(Date.now() + 30000),
-					});
-				} catch (e) {
-					this.addFeedItem(
-						this.buildFeedItem({
-							username: 'system-n',
-							body: JSON.stringify(e),
-						})
-					);
-				}
-
-				try {
-					this.timerController.addTimer({
-						id: 'extra-time',
-						durationMs: 30000,
-						callback: async () => {
-							const scores: {
-								host: number;
-								guest: number;
-							} = await this.storage.get(StorageKeys.Scores);
-
-							const state = await this.state.get();
-
-							if (!state) {
-								return;
-							}
-
-							const winner = scores.host > scores.guest ? 'host' : scores.host < scores.guest ? 'guest' : 'draw';
-
-							if (winner === 'host') {
-								await this.env.winStreaks.put(this.hostSession!.user.id, (this.winStreaks.host + 1).toString());
-								await this.env.winStreaks.put(this.guestSession!.user.id, '0');
-							}
-
-							if (winner === 'guest') {
-								await this.env.winStreaks.put(this.guestSession!.user.id, (this.winStreaks.guest + 1).toString());
-								await this.env.winStreaks.put(this.hostSession!.user.id, '0');
-							}
-
-							this.state.set('round', {
-								...(state.data as State['round']),
-								winner: winner,
-								isFinished: true,
-								timerTextOverride: null,
-								winStreaks: await this.getStreaks(),
-								endsAt: new Date(Date.now() + kVictoryLapDuration),
-							});
+						announcement: {
+							host: extraTimeAnnouncement,
+							guest: extraTimeAnnouncement,
 						},
-					});
-				} catch (e) {
-					this.addFeedItem(
-						this.buildFeedItem({
-							username: 'system-n-timer',
-							body: JSON.stringify(e),
-						})
-					);
-				}
+					},
+					true
+				);
+
+				this.timerController.addTimer({
+					id: 'extra-time',
+					durationMs: 30000,
+					callback: async () => {
+						const scores: {
+							host: number;
+							guest: number;
+						} = await this.storage.get(StorageKeys.Scores);
+						const state: State['round'] | null = await this.getStateOrNull('round');
+
+						if (!state) {
+							return;
+						}
+
+						const winner = scores.host > scores.guest ? 'host' : scores.host < scores.guest ? 'guest' : 'draw';
+
+						if (winner === 'host') {
+							await this.env.winStreaks.put(this.hostSession!.user.id, (this.winStreaks.host + 1).toString());
+							await this.env.winStreaks.put(this.guestSession!.user.id, '0');
+						}
+
+						if (winner === 'guest') {
+							await this.env.winStreaks.put(this.guestSession!.user.id, (this.winStreaks.guest + 1).toString());
+							await this.env.winStreaks.put(this.hostSession!.user.id, '0');
+						}
+
+						this.state.set('round', {
+							...state,
+							winner: winner,
+							isFinished: true,
+							timerTextOverride: null,
+							winStreaks: await this.getStreaks(),
+							endsAt: new Date(Date.now() + kVictoryLapDuration),
+						});
+					},
+				});
 			} else {
 				this.state.set('round', {
 					...(state.data as unknown as State['round']),
@@ -1140,7 +1123,7 @@ export class Battle extends Game<Env, State, Events> {
 			const usersDoubleTapped: Set<string> = (await this.storage.get(StorageKeys.UsersDoubleTapped)) ?? new Set<string>();
 
 			if (usersDoubleTapped.has(session.user.id)) {
-				// await this.handleLike(session, data);
+				await this.handleLike(session, data);
 
 				return;
 			}
