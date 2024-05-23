@@ -37,7 +37,7 @@ export class TimerController {
 		return this.timers.has(id);
 	}
 
-	removeTimer(id: string, cleaner?: boolean) {
+	removeTimer(id: string, cleaner: boolean = false) {
 		if (this.timers.has(id)) {
 			clearTimeout(this.timers.get(id)!.timerId);
 
