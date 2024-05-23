@@ -282,14 +282,68 @@ export class Battle extends Game<Env, State, Events> {
 				await this.env.winStreaks.put(this.hostSession!.user.id, '0');
 			}
 
-			this.state.set('round', {
-				...(state.data as unknown as State['round']),
-				winner: winner,
-				isFinished: true,
-				timerTextOverride: null,
-				winStreaks: await this.getStreaks(),
-				endsAt: new Date(Date.now() + kVictoryLapDuration),
-			});
+			if (winner === 'draw') {
+				const extraTimeAnnouncement: Announcement = {
+					text: 'extra time',
+					durationMs: 3000,
+				};
+
+				await this.state.set('round', {
+					...(state.data as unknown as State['round']),
+					announcement: {
+						host: extraTimeAnnouncement,
+						guest: extraTimeAnnouncement,
+					},
+					endsAt: new Date(Date.now() + 30000),
+				});
+
+				this.timerController.addTimer({
+					id: 'extra-time',
+					durationMs: 30000,
+					callback: async () => {
+						const scores: {
+							host: number;
+							guest: number;
+						} = await this.storage.get(StorageKeys.Scores);
+
+						const state = await this.state.get();
+
+						if (!state) {
+							return;
+						}
+
+						const winner = scores.host > scores.guest ? 'host' : scores.host < scores.guest ? 'guest' : 'draw';
+
+						if (winner === 'host') {
+							await this.env.winStreaks.put(this.hostSession!.user.id, (this.winStreaks.host + 1).toString());
+							await this.env.winStreaks.put(this.guestSession!.user.id, '0');
+						}
+
+						if (winner === 'guest') {
+							await this.env.winStreaks.put(this.guestSession!.user.id, (this.winStreaks.guest + 1).toString());
+							await this.env.winStreaks.put(this.hostSession!.user.id, '0');
+						}
+
+						this.state.set('round', {
+							...(state.data as State['round']),
+							winner: winner,
+							isFinished: true,
+							timerTextOverride: null,
+							winStreaks: await this.getStreaks(),
+							endsAt: new Date(Date.now() + kVictoryLapDuration),
+						});
+					},
+				});
+			} else {
+				this.state.set('round', {
+					...(state.data as unknown as State['round']),
+					winner: winner,
+					isFinished: true,
+					timerTextOverride: null,
+					winStreaks: await this.getStreaks(),
+					endsAt: new Date(Date.now() + kVictoryLapDuration),
+				});
+			}
 		}, kRoundDuration + 3000);
 	};
 
