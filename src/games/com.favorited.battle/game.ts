@@ -288,11 +288,20 @@ export class Battle extends Game<Env, State, Events> {
 				// 	durationMs: 3000,
 				// };
 
-				this.state.set('round', {
-					...(state.data as State['round']),
-					timerTextOverride: null,
-					endsAt: new Date(Date.now() + 30000),
-				});
+				try {
+					this.state.set('round', {
+						...(state.data as State['round']),
+						timerTextOverride: null,
+						endsAt: new Date(Date.now() + 30000),
+					});
+				} catch (e) {
+					this.addFeedItem(
+						this.buildFeedItem({
+							username: 'system-n',
+							body: JSON.stringify(e),
+						})
+					);
+				}
 
 				this.timerController.addTimer({
 					id: 'extra-time',
