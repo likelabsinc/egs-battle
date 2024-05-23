@@ -938,7 +938,7 @@ export class Battle extends Game<Env, State, Events> {
 		};
 	}
 
-	private async handleLike(session: Session<Events>, data: { side: Side }) {
+	private async handleLike(session: Session<Events>, data: { side: 'host' | 'guest' }) {
 		const timerKey = session.user.id + '-like-batch-timer';
 
 		if (this.timerController.isActive(timerKey)) {
