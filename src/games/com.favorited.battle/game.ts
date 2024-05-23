@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 300 * 1000;
+const kRoundDuration = 45 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kDoubleTapValue = 3;
 
