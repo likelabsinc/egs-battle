@@ -283,17 +283,13 @@ export class Battle extends Game<Env, State, Events> {
 			}
 
 			if (winner === 'draw') {
-				const extraTimeAnnouncement: Announcement = {
-					text: 'extra time',
-					durationMs: 3000,
-				};
+				// const extraTimeAnnouncement: Announcement = {
+				// 	text: 'extra time',
+				// 	durationMs: 3000,
+				// };
 
-				await this.state.set('round', {
-					...(state.data as unknown as State['round']),
-					announcement: {
-						host: extraTimeAnnouncement,
-						guest: extraTimeAnnouncement,
-					},
+				this.state.set('round', {
+					...(state.data as State['round']),
 					endsAt: new Date(Date.now() + 30000),
 				});
 
