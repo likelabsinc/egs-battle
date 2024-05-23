@@ -135,14 +135,11 @@ export class Battle extends Game<Env, State, Events> {
 	private getScheduledBooster = async () => (Math.random() > 0.1 ? new DoubleScoreBooster('x2 value') : new TripleScoreBooster('x3 value'));
 
 	private startBoosterSchedule = async (delayInMs: number) => {
-		/// TODO: Implement the booster schedule
-		///
-		/// TODO: figure out the logic of showing value or gifter challenge
-		///
 		const max = 100;
 		const min = 0;
 		const chance = 50;
-		const valueChallenge = (Math.floor(Math.pow(10, 14) * Math.random() * Math.random()) % (max - min + 1)) + min > 50;
+
+		const valueChallenge = (Math.floor(Math.pow(10, 14) * Math.random() * Math.random()) % (max - min + 1)) + min > chance;
 
 		this.timerController.addTimer({
 			id: 'target-delay',
@@ -293,13 +290,6 @@ export class Battle extends Game<Env, State, Events> {
 				winStreaks: await this.getStreaks(),
 				endsAt: new Date(Date.now() + kVictoryLapDuration),
 			});
-
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: winner === 'draw' ? undefined : winner == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username,
-					body: winner == 'draw' ? 'It`s draw!' : `won this round!`,
-				})
-			);
 		}, kRoundDuration + 3000);
 	};
 
@@ -321,13 +311,6 @@ export class Battle extends Game<Env, State, Events> {
 		}
 
 		const target = state.target![args.side];
-
-		this.addFeedItem(
-			this.buildFeedItem({
-				username: args.user.username,
-				body: `contributed ${args.valueContributed} to the ${args.side} target: ${target?.currentValue}/${target?.targetValue}`,
-			})
-		);
 
 		if (!target) {
 			return;
@@ -961,16 +944,16 @@ export class Battle extends Game<Env, State, Events> {
 				return;
 			}
 
+			this.addFeedItem(
+				this.buildFeedItem({
+					username: 'system-n',
+					body: JSON.stringify(data),
+				})
+			);
+
 			/// Setting the type of the body to the type of the gift
 			const body = data.data as Game.SystemNotification.Body['gift'];
 			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
-
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: body.user.username,
-					body: `sent gift to the ${side} team, ${body.livestream.userId} ${this.hostSession?.user.id}`,
-				})
-			);
 
 			const state = await this.getStateOrNull('round');
 
@@ -1010,7 +993,7 @@ export class Battle extends Game<Env, State, Events> {
 			await this.addFeedItem(
 				this.buildFeedItem({
 					username: body.user.username,
-					body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
+					body: `sent gift ${body.gift.name} (${body.value} point${body.value > 1 ? 's' : ''})`,
 				})
 			);
 
@@ -1208,12 +1191,7 @@ export class Battle extends Game<Env, State, Events> {
 				invited: false,
 			});
 		} catch (e) {
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: 'system',
-					body: JSON.stringify(e),
-				})
-			);
+			console.error(e);
 		}
 	}
 
@@ -1252,13 +1230,6 @@ export class Battle extends Game<Env, State, Events> {
 				guest: winner == 'guest' ? { text: 'opponent forfeited', durationMs: 3000 } : null,
 			},
 		});
-
-		this.addFeedItem(
-			this.buildFeedItem({
-				username: winner == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username,
-				body: `won this round, ${side} left the game!`,
-			})
-		);
 	}
 
 	private async disposeBooster() {
