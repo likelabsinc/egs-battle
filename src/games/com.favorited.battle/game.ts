@@ -1119,6 +1119,14 @@ export class Battle extends Game<Env, State, Events> {
 				// await this.handleLike(session, data);
 
 				return;
+			} else {
+				await this.addFeedItem(
+					this.buildFeedItem({
+						username: session.user.username,
+						iconImageUrl: 'https://images.ctfassets.net/4nom3kq2w86u/4PKCdar8vRaQntNaJiIa5M/b03369e686f9630778dd7f2c6d856758/heart.png',
+						body: `sent ${kDoubleTapValue} point${kDoubleTapValue > 1 ? 's' : ''}`,
+					})
+				);
 			}
 
 			session.send('set-double-tapped', true);
@@ -1149,13 +1157,6 @@ export class Battle extends Game<Env, State, Events> {
 
 			/// Updating the user contribution
 			await this.updateUserContribution(session.user.id, kDoubleTapValue, data.side);
-
-			// await this.addFeedItem(
-			// 	this.buildFeedItem({
-			// 		username: session.user.username,
-			// 		body: `sent ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
-			// 	})
-			// );
 
 			await this.updateState(
 				'round',
