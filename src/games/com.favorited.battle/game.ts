@@ -1030,14 +1030,6 @@ export class Battle extends Game<Env, State, Events> {
 			if (data.type != 'gift') {
 				return;
 			}
-
-			this.addFeedItem(
-				this.buildFeedItem({
-					username: 'system-n',
-					body: JSON.stringify(data),
-				})
-			);
-
 			/// Setting the type of the body to the type of the gift
 			const body = data.data as Game.SystemNotification.Body['gift'];
 			const side = body.livestream.userId == this.hostSession?.user.id ? Side.host : Side.guest;
@@ -1080,6 +1072,7 @@ export class Battle extends Game<Env, State, Events> {
 			await this.addFeedItem(
 				this.buildFeedItem({
 					username: body.user.username,
+					iconImageUrl: 'https://images.ctfassets.net/4nom3kq2w86u/6xKuttS9cnNbNw31900n8b/0bcc113f9541b6bb4f47399ff52eeb68/gift.png',
 					body: `sent ${body.gift.name} (${body.value} point${body.value > 1 ? 's' : ''})`,
 				})
 			);
@@ -1123,7 +1116,7 @@ export class Battle extends Game<Env, State, Events> {
 			const usersDoubleTapped: Set<string> = (await this.storage.get(StorageKeys.UsersDoubleTapped)) ?? new Set<string>();
 
 			if (usersDoubleTapped.has(session.user.id)) {
-				await this.handleLike(session, data);
+				// await this.handleLike(session, data);
 
 				return;
 			}
@@ -1159,8 +1152,8 @@ export class Battle extends Game<Env, State, Events> {
 
 			// await this.addFeedItem(
 			// 	this.buildFeedItem({
-			// 		username: body.user.username,
-			// 		body: `sent a ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
+			// 		username: session.user.username,
+			// 		body: `sent ${body.gift.name} ${body.quantity > 1 ? `x${body.quantity}` : ''}`,
 			// 	})
 			// );
 
