@@ -287,6 +287,12 @@ export class Battle extends Game<Env, State, Events> {
 				// 	text: 'extra time',
 				// 	durationMs: 3000,
 				// };
+				this.addFeedItem(
+					this.buildFeedItem({
+						username: 'system',
+						body: 'It is a draw!',
+					})
+				);
 
 				try {
 					this.state.set('round', {
@@ -303,43 +309,52 @@ export class Battle extends Game<Env, State, Events> {
 					);
 				}
 
-				this.timerController.addTimer({
-					id: 'extra-time',
-					durationMs: 30000,
-					callback: async () => {
-						const scores: {
-							host: number;
-							guest: number;
-						} = await this.storage.get(StorageKeys.Scores);
+				try {
+					this.timerController.addTimer({
+						id: 'extra-time',
+						durationMs: 30000,
+						callback: async () => {
+							const scores: {
+								host: number;
+								guest: number;
+							} = await this.storage.get(StorageKeys.Scores);
 
-						const state = await this.state.get();
+							const state = await this.state.get();
 
-						if (!state) {
-							return;
-						}
+							if (!state) {
+								return;
+							}
 
-						const winner = scores.host > scores.guest ? 'host' : scores.host < scores.guest ? 'guest' : 'draw';
+							const winner = scores.host > scores.guest ? 'host' : scores.host < scores.guest ? 'guest' : 'draw';
 
-						if (winner === 'host') {
-							await this.env.winStreaks.put(this.hostSession!.user.id, (this.winStreaks.host + 1).toString());
-							await this.env.winStreaks.put(this.guestSession!.user.id, '0');
-						}
+							if (winner === 'host') {
+								await this.env.winStreaks.put(this.hostSession!.user.id, (this.winStreaks.host + 1).toString());
+								await this.env.winStreaks.put(this.guestSession!.user.id, '0');
+							}
 
-						if (winner === 'guest') {
-							await this.env.winStreaks.put(this.guestSession!.user.id, (this.winStreaks.guest + 1).toString());
-							await this.env.winStreaks.put(this.hostSession!.user.id, '0');
-						}
+							if (winner === 'guest') {
+								await this.env.winStreaks.put(this.guestSession!.user.id, (this.winStreaks.guest + 1).toString());
+								await this.env.winStreaks.put(this.hostSession!.user.id, '0');
+							}
 
-						this.state.set('round', {
-							...(state.data as State['round']),
-							winner: winner,
-							isFinished: true,
-							timerTextOverride: null,
-							winStreaks: await this.getStreaks(),
-							endsAt: new Date(Date.now() + kVictoryLapDuration),
-						});
-					},
-				});
+							this.state.set('round', {
+								...(state.data as State['round']),
+								winner: winner,
+								isFinished: true,
+								timerTextOverride: null,
+								winStreaks: await this.getStreaks(),
+								endsAt: new Date(Date.now() + kVictoryLapDuration),
+							});
+						},
+					});
+				} catch (e) {
+					this.addFeedItem(
+						this.buildFeedItem({
+							username: 'system-n-timer',
+							body: JSON.stringify(e),
+						})
+					);
+				}
 			} else {
 				this.state.set('round', {
 					...(state.data as unknown as State['round']),
