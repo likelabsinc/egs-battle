@@ -1065,7 +1065,7 @@ export class Battle extends Game<Env, State, Events> {
 			const usersDoubleTapped: Set<string> = (await this.storage.get(StorageKeys.UsersDoubleTapped)) ?? new Set<string>();
 
 			if (usersDoubleTapped.has(session.user.id)) {
-				await this.handleLike(session, data);
+				// await this.handleLike(session, data);
 
 				return;
 			}
