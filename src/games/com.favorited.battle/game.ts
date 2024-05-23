@@ -290,6 +290,7 @@ export class Battle extends Game<Env, State, Events> {
 
 				this.state.set('round', {
 					...(state.data as State['round']),
+					timerTextOverride: null,
 					endsAt: new Date(Date.now() + 30000),
 				});
 
