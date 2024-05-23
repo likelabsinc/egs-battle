@@ -938,6 +938,35 @@ export class Battle extends Game<Env, State, Events> {
 		};
 	}
 
+	private async handleLike(session: Session<Events>, data: { side: Side }) {
+		const timerKey = session.user.id + '-like-batch-timer';
+
+		if (this.timerController.isActive(timerKey)) {
+			this.timerController.removeTimer(timerKey);
+		}
+
+		const userLikes: number = (await this.storage.get(session.user.id + '-likes')) ?? 0;
+
+		await this.storage.set(session.user.id + '-likes', userLikes + 1);
+
+		this.timerController.addTimer({
+			id: timerKey,
+			durationMs: 1500,
+			callback: async () => {
+				const totalUserLikes: number = (await this.storage.get(session.user.id + '-likes')) ?? 0;
+
+				await this.addFeedItem(
+					this.buildFeedItem({
+						username: session.user.username,
+						body: `liked ${totalUserLikes} time${totalUserLikes > 1 ? 's' : ''}`,
+					})
+				);
+
+				await this.storage.set(session.user.id + '-likes', 0);
+			},
+		});
+	}
+
 	protected registerEvents(): void {
 		this.registerGlobalEvent('system-notification', async (game, data) => {
 			if (data.type != 'gift') {
@@ -993,7 +1022,7 @@ export class Battle extends Game<Env, State, Events> {
 			await this.addFeedItem(
 				this.buildFeedItem({
 					username: body.user.username,
-					body: `sent gift ${body.gift.name} (${body.value} point${body.value > 1 ? 's' : ''})`,
+					body: `sent ${body.gift.name} (${body.value} point${body.value > 1 ? 's' : ''})`,
 				})
 			);
 
@@ -1036,8 +1065,11 @@ export class Battle extends Game<Env, State, Events> {
 			const usersDoubleTapped: Set<string> = (await this.storage.get(StorageKeys.UsersDoubleTapped)) ?? new Set<string>();
 
 			if (usersDoubleTapped.has(session.user.id)) {
+				this.handleLike(session, data);
+
 				return;
 			}
+
 			session.send('set-double-tapped', true);
 
 			usersDoubleTapped.add(session.user.id);
