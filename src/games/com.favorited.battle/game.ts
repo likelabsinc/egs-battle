@@ -39,8 +39,12 @@ export class Battle extends Game<Env, State, Events> {
 
 	private getLeaderboard = async () => {
 		const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
-		const hostLeaderboard = Object.values(userContributions.host).sort((a, b) => b.score - a.score);
-		const guestLeaderboard = Object.values(userContributions.guest).sort((a, b) => b.score - a.score);
+		const hostLeaderboard = Object.values(userContributions.host)
+			.sort((a, b) => b.score - a.score)
+			.splice(0, 3);
+		const guestLeaderboard = Object.values(userContributions.guest)
+			.sort((a, b) => b.score - a.score)
+			.splice(0, 3);
 
 		return {
 			host: hostLeaderboard,
