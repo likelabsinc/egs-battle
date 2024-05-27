@@ -1215,22 +1215,8 @@ export class Battle extends Game<Env, State, Events> {
 			this.maybeForfeit(session.role == 'guest' ? Side.guest : Side.host);
 
 			if (session.role == 'streamer') {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `streamer left the game!`,
-					})
-				);
-
 				await this.dispose();
 				await this.resetGame();
-			} else {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `${session.user.username} left the game! ${session.role}`,
-					})
-				);
 			}
 		});
 
@@ -1243,21 +1229,8 @@ export class Battle extends Game<Env, State, Events> {
 			this.maybeForfeit(session.role == 'guest' ? Side.guest : Side.host);
 
 			if (session.role == 'streamer') {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `streamer left the game!`,
-					})
-				);
 				await this.dispose();
 				await this.resetGame();
-			} else {
-				this.addFeedItem(
-					this.buildFeedItem({
-						username: 'system',
-						body: `${session.user.username} left the game! ${session.role}`,
-					})
-				);
 			}
 		});
 	}
@@ -1278,13 +1251,6 @@ export class Battle extends Game<Env, State, Events> {
 	}
 
 	private async maybeForfeit(side: Side) {
-		this.addFeedItem(
-			this.buildFeedItem({
-				username: side == Side.host ? this.guestSession?.user.username : this.hostSession?.user.username,
-				body: `left the game!`,
-			})
-		);
-
 		const state = await this.getStateOrNull('round');
 
 		if (!state) {
