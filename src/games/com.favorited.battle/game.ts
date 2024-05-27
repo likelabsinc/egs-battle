@@ -39,12 +39,8 @@ export class Battle extends Game<Env, State, Events> {
 
 	private getLeaderboard = async () => {
 		const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
-		const hostLeaderboard = Object.values(userContributions.host)
-			.sort((a, b) => b.score - a.score)
-			.splice(0, 3);
-		const guestLeaderboard = Object.values(userContributions.guest)
-			.sort((a, b) => b.score - a.score)
-			.splice(0, 3);
+		const hostLeaderboard = Object.values(userContributions.host).sort((a, b) => b.score - a.score);
+		const guestLeaderboard = Object.values(userContributions.guest).sort((a, b) => b.score - a.score);
 
 		return {
 			host: hostLeaderboard,
@@ -1124,7 +1120,9 @@ export class Battle extends Game<Env, State, Events> {
 					this.buildFeedItem({
 						username: session.user.username,
 						iconImageUrl: 'https://images.ctfassets.net/4nom3kq2w86u/4PKCdar8vRaQntNaJiIa5M/b03369e686f9630778dd7f2c6d856758/heart.png',
-						body: `sent ${kDoubleTapValue} point${kDoubleTapValue > 1 ? 's' : ''}`,
+						body: `sent ${kDoubleTapValue} point${kDoubleTapValue > 1 ? 's' : ''} to ${
+							data.side == 'host' ? this.hostSession?.user.username : this.guestSession?.user.username
+						}!`,
 					})
 				);
 			}
