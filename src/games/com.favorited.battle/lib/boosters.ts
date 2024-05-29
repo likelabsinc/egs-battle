@@ -24,7 +24,7 @@ export class TripleScoreBooster implements Booster {
 	public endsAt: Date;
 
 	constructor(public title: string) {
-		this.durationInMs = 15000;
+		this.durationInMs = 30000;
 		this.endsAt = new Date(Date.now() + this.durationInMs);
 	}
 

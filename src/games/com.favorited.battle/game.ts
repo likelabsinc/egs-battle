@@ -140,6 +140,7 @@ export class Battle extends Game<Env, State, Events> {
 		const chance = 50;
 
 		const valueChallenge = (Math.floor(Math.pow(10, 14) * Math.random() * Math.random()) % (max - min + 1)) + min > chance;
+		const booster = await this.getScheduledBooster();
 
 		this.timerController.addTimer({
 			id: 'target-delay',
@@ -156,7 +157,7 @@ export class Battle extends Game<Env, State, Events> {
 					onAnnouncementEnd: async () => {
 						this.createAnnouncement({
 							announcement: {
-								text: 'reaching the target will 2x team points',
+								text: `reaching the target will ${booster.title == 'x3 value' ? '3' : '2'}x team points`,
 								durationMs: 3000,
 							},
 							side: Side.both,
@@ -170,7 +171,7 @@ export class Battle extends Game<Env, State, Events> {
 											// targetValue: 5,
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 30000),
-											booster: await this.getScheduledBooster(),
+											booster: booster,
 										},
 										Side.both
 									);
@@ -182,7 +183,7 @@ export class Battle extends Game<Env, State, Events> {
 											targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 40000),
-											booster: await this.getScheduledBooster(),
+											booster: booster,
 										},
 										Side.both
 									);
@@ -853,6 +854,9 @@ export class Battle extends Game<Env, State, Events> {
 
 	private async createBooster(booster: Booster, side: Side, onBoosterEnd?: () => void) {
 		const state = await this.getStateOrNull('round');
+
+		/// Setting the end date of the booster
+		booster.endsAt = new Date(Date.now() + booster.durationInMs);
 
 		if (!state) {
 			return;
