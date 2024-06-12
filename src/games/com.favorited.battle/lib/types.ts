@@ -7,6 +7,7 @@ export enum StorageKeys {
 	UserContributions = 'user-contributions',
 	Feed = 'feed',
 	UsersDoubleTapped = 'users-double-tapped',
+	MuteMap = 'mute-map',
 }
 
 export interface UserContribution {
@@ -75,3 +76,7 @@ export enum Side {
 	guest = 'guest',
 	both = 'both',
 }
+
+export type MuteMap = {
+	[key: string]: string[];
+};
