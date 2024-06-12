@@ -134,6 +134,14 @@ export class Battle extends Game<Env, State, Events> {
 	 */
 	private getScheduledBooster = async () => (Math.random() > 0.1 ? new DoubleScoreBooster('x2 value') : new TripleScoreBooster('x3 value'));
 
+	private getValueChallengeTargetValue = () => {
+		return this.connectedSessions.length < 10 ? 10 : Math.max(150, this.connectedSessions.length * 10 + 50);
+	};
+
+	private getGifterChallengeTargetValue = () => {
+		return Math.max(2, Math.floor(this.connectedSessions.length / 5));
+	};
+
 	private startBoosterSchedule = async (delayInMs: number) => {
 		const max = 100;
 		const min = 0;
@@ -167,7 +175,7 @@ export class Battle extends Game<Env, State, Events> {
 										{
 											title: 'speed challenge',
 											type: TargetType.score,
-											targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+											targetValue: this.getValueChallengeTargetValue(),
 											// targetValue: 5,
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 30000),
@@ -180,7 +188,7 @@ export class Battle extends Game<Env, State, Events> {
 										{
 											title: 'gifter challenge',
 											type: TargetType.uniqueUsers,
-											targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
+											targetValue: this.getGifterChallengeTargetValue(),
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 40000),
 											booster: booster,
