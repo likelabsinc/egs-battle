@@ -8,6 +8,7 @@ export interface State {
 	 */
 	initial: {
 		invited: boolean;
+		isCoHostInvite: boolean;
 		title?: string;
 	};
 

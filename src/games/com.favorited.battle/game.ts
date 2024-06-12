@@ -1099,13 +1099,13 @@ export class Battle extends Game<Env, State, Events> {
 		});
 
 		this.registerEvent('accept-invite', async (game, session) => {
-			if (session.isGuest) {
+			if (session.isGuest || session.isStreamer) {
 				this.startGame();
 			}
 		});
 
 		this.registerEvent('decline-invite', async (game, session) => {
-			if (session.isGuest) {
+			if (session.isGuest || session.isStreamer) {
 				this.hostSession?.send('invite-declined');
 			}
 		});
@@ -1177,8 +1177,8 @@ export class Battle extends Game<Env, State, Events> {
 		/**
 		 * @event streamer-restart - When the streamer restarts the game.
 		 */
-		this.registerEvent('streamer-restart', async (game, session) => {
-			if (!session.isStreamer) return;
+		this.registerEvent('streamer-restart', async (game, primarySession) => {
+			if (!primarySession.isStreamer && !primarySession.isGuest) return;
 
 			this.disposeBooster();
 
@@ -1193,6 +1193,7 @@ export class Battle extends Game<Env, State, Events> {
 						state: 'initial',
 						data: {
 							invited: false,
+							isCoHostInvite: primarySession.isGuest,
 						},
 					});
 				} else if (session.isGuest) {
@@ -1201,6 +1202,7 @@ export class Battle extends Game<Env, State, Events> {
 						data: {
 							invited: false,
 							title: 'You have been invited to the rematch',
+							isCoHostInvite: primarySession.isGuest,
 						},
 					});
 				} else {
@@ -1252,6 +1254,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.state.set('initial', {
 				invited: false,
+				isCoHostInvite: false,
 			});
 		} catch (e) {
 			console.error(e);
@@ -1324,6 +1327,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.state.set('initial', {
 				invited: false,
+				isCoHostInvite: false,
 			});
 			return;
 		} else {
