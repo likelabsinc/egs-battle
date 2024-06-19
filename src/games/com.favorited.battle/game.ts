@@ -6,7 +6,7 @@ import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScor
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 300 * 1000;
+const kRoundDuration = 5 * 1000;
 const kVictoryLapDuration = 12 * 1000;
 const kDoubleTapValue = 3;
 
@@ -1201,7 +1201,7 @@ export class Battle extends Game<Env, State, Events> {
 						state: 'initial',
 						data: {
 							invited: false,
-							title: 'You have been invited to the rematch',
+							title: primarySession.isGuest ? 'You have invited the streamer to the rematch' : 'You have been invited to the rematch',
 							isCoHostInvite: primarySession.isGuest,
 						},
 					});
