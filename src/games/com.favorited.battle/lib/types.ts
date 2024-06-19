@@ -71,6 +71,13 @@ export interface Announcement {
 	durationMs: number;
 }
 
+export interface Notification {
+	text: string;
+	backgroundColor?: string;
+	textColor?: string;
+	durationMs: number;
+}
+
 export enum Side {
 	host = 'host',
 	guest = 'guest',

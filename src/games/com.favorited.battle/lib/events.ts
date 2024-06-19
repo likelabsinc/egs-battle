@@ -1,5 +1,5 @@
 import { Game, Session } from '@likelabsinc/egs-tools';
-import { Announcement, FeedItem, MuteMap, UserContribution } from './types';
+import { Announcement, FeedItem, MuteMap, Notification, UserContribution } from './types';
 import { Booster } from './boosters';
 
 interface InboundEvents extends Game.Events.InboundEvents {
@@ -60,6 +60,11 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 	};
 
 	'update-mute-map': MuteMap;
+
+	'send-notification': {
+		side: 'host' | 'guest';
+		notification: Notification;
+	};
 }
 
 export type Events = Game.Events<InboundEvents, OutboundEvents>;

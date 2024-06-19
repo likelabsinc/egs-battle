@@ -56,6 +56,15 @@ export class Battle extends Game<Env, State, Events> {
 		console.log(muteMap);
 
 		session.sendToChannel('update-mute-map', muteMap);
+
+		session.sendToChannel('send-notification', {
+			side: session.isStreamer ? 'host' : 'guest',
+			notification: {
+				text: `🔇 ${session.user.username} muted the other creator`,
+				backgroundColor: '#88000000',
+				durationMs: 2500,
+			},
+		});
 	}
 
 	private async unmute(session: Session<Events>, id: string) {
@@ -70,6 +79,15 @@ export class Battle extends Game<Env, State, Events> {
 		await this.storage.set(StorageKeys.MuteMap, muteMap);
 
 		session.sendToChannel('update-mute-map', muteMap);
+
+		session.sendToChannel('send-notification', {
+			side: session.isStreamer ? 'host' : 'guest',
+			notification: {
+				text: `🔊 ${session.user.username} unmuted the other creator`,
+				backgroundColor: '#88000000',
+				durationMs: 2500,
+			},
+		});
 	}
 
 	private getLeaderboard = async () => {
@@ -271,6 +289,10 @@ export class Battle extends Game<Env, State, Events> {
 				guest: null,
 			},
 			announcement: {
+				host: null,
+				guest: null,
+			},
+			notification: {
 				host: null,
 				guest: null,
 			},
@@ -1318,7 +1340,7 @@ export class Battle extends Game<Env, State, Events> {
 		const winner = side == Side.host ? 'guest' : 'host';
 
 		await this.env.winStreaks.put(side == Side.guest ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
-		
+
 		await this.state.set('round', {
 			...(state as State['round']),
 			winner: winner,
