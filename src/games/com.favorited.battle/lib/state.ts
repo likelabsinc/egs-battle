@@ -1,5 +1,5 @@
 import { Session } from '@likelabsinc/egs-tools';
-import { Announcement, FeedItem, Target, UserContribution } from './types';
+import { Announcement, FeedItem, Target, UserContribution, Notification } from './types';
 import { Booster } from './boosters';
 
 export interface State {
@@ -38,6 +38,10 @@ export interface State {
 		announcement: {
 			host: Announcement | null;
 			guest: Announcement | null;
+		};
+		notification: {
+			host: Notification | null;
+			guest: Notification | null;
 		};
 		timerTextOverride: string | null;
 		endsAt: Date;

@@ -1,5 +1,5 @@
 import { Game, Session } from '@likelabsinc/egs-tools';
-import { Announcement, FeedItem, UserContribution } from './types';
+import { Announcement, FeedItem, MuteMap, Notification, UserContribution } from './types';
 import { Booster } from './boosters';
 
 interface InboundEvents extends Game.Events.InboundEvents {
@@ -22,6 +22,8 @@ interface InboundEvents extends Game.Events.InboundEvents {
 	'user-double-tap': {
 		side: 'host' | 'guest';
 	};
+	'mute-cohost': string;
+	'unmute-cohost': string;
 }
 
 interface OutboundEvents extends Game.Events.OutboundEvents {
@@ -55,6 +57,13 @@ interface OutboundEvents extends Game.Events.OutboundEvents {
 	'announce-target': {
 		host?: Announcement | null;
 		guest?: Announcement | null;
+	};
+
+	'update-mute-map': MuteMap;
+
+	'send-notification': {
+		side: 'host' | 'guest';
+		notification: Notification;
 	};
 }
 
