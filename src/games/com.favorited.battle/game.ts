@@ -6,6 +6,7 @@ import { Announcement, FeedItem, MuteMap, Side, StorageKeys, Target, TargetType,
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
+
 const kRoundDuration = 300 * 1000;
 const kVictoryLapDuration = 180 * 1000;
 const kDoubleTapValue = 3;
@@ -1167,13 +1168,13 @@ export class Battle extends Game<Env, State, Events> {
 		this.registerEvent('unmute-cohost', async (_, session, data) => this.unmute(session, data));
 
 		this.registerEvent('accept-invite', async (game, session) => {
-			if (session.isGuest) {
+			if (session.isGuest || session.isStreamer) {
 				this.startGame();
 			}
 		});
 
 		this.registerEvent('decline-invite', async (game, session) => {
-			if (session.isGuest) {
+			if (session.isGuest || session.isStreamer) {
 				this.hostSession?.send('invite-declined');
 			}
 		});
@@ -1245,8 +1246,8 @@ export class Battle extends Game<Env, State, Events> {
 		/**
 		 * @event streamer-restart - When the streamer restarts the game.
 		 */
-		this.registerEvent('streamer-restart', async (game, session) => {
-			if (!session.isStreamer) return;
+		this.registerEvent('streamer-restart', async (game, primarySession) => {
+			if (!primarySession.isStreamer && !primarySession.isGuest) return;
 
 			this.disposeBooster();
 
@@ -1267,6 +1268,7 @@ export class Battle extends Game<Env, State, Events> {
 						state: 'initial',
 						data: {
 							invited: false,
+							isCoHostInvite: primarySession.isGuest,
 						},
 					});
 				} else if (session.isGuest) {
@@ -1274,7 +1276,8 @@ export class Battle extends Game<Env, State, Events> {
 						state: 'initial',
 						data: {
 							invited: false,
-							title: 'You have been invited to the rematch',
+							title: primarySession.isGuest ? 'You have invited the streamer to the rematch' : 'You have been invited to the rematch',
+							isCoHostInvite: primarySession.isGuest,
 						},
 					});
 				} else {
@@ -1326,6 +1329,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.state.set('initial', {
 				invited: false,
+				isCoHostInvite: false,
 			});
 		} catch (e) {
 			console.error(e);
@@ -1399,6 +1403,7 @@ export class Battle extends Game<Env, State, Events> {
 
 			await this.state.set('initial', {
 				invited: false,
+				isCoHostInvite: false,
 			});
 			return;
 		} else {
