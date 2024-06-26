@@ -1403,6 +1403,8 @@ export class Battle extends Game<Env, State, Events> {
 			return;
 		} else {
 			session.send('set-state', state.toJson());
+
+			session.send('update-mute-map', (await this.storage.get(StorageKeys.MuteMap)) ?? {});
 		}
 
 		if (usersDoubleTapped.has(session.user.id)) {
