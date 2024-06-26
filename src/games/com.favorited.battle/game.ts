@@ -2,12 +2,13 @@ import { Game, Session } from '@likelabsinc/egs-tools';
 import { Events } from './lib/events';
 import { State } from './lib/state';
 import { Env } from '../../env/env';
-import { Announcement, FeedItem, Side, StorageKeys, Target, TargetType, UserScores } from './lib/types';
+import { Announcement, FeedItem, MuteMap, Side, StorageKeys, Target, TargetType, UserScores } from './lib/types';
 import { Booster, DoubleScoreBooster, TripleScoreBooster } from './lib/boosters';
 import { TimerController } from './lib/timer_controller';
 
-const kRoundDuration = 5 * 1000;
-const kVictoryLapDuration = 12 * 1000;
+
+const kRoundDuration = 300 * 1000;
+const kVictoryLapDuration = 180 * 1000;
 const kDoubleTapValue = 3;
 
 export class Battle extends Game<Env, State, Events> {
@@ -36,6 +37,59 @@ export class Battle extends Game<Env, State, Events> {
 		host: 0,
 		guest: 0,
 	};
+
+	private async mute(session: Session<Events>, id: string) {
+		const muteMap: MuteMap = (await this.storage.get(StorageKeys.MuteMap)) ?? {};
+
+		if (session.isStreamer || session.isGuest) {
+			if (muteMap[session.user.id]) {
+				console.log('adding to mute map', id);
+
+				if (!muteMap[session.user.id].includes(id)) {
+					muteMap[session.user.id].push(id);
+				}
+			} else {
+				muteMap[session.user.id] = [id];
+			}
+		}
+
+		await this.storage.set(StorageKeys.MuteMap, muteMap);
+		console.log(muteMap);
+
+		session.sendToChannel('update-mute-map', muteMap);
+
+		session.sendToChannel('send-notification', {
+			side: session.isStreamer ? 'host' : 'guest',
+			notification: {
+				text: `🔇 ${session.user.username} muted the other creator`,
+				backgroundColor: '#88000000',
+				durationMs: 2500,
+			},
+		});
+	}
+
+	private async unmute(session: Session<Events>, id: string) {
+		const muteMap: MuteMap = (await this.storage.get(StorageKeys.MuteMap)) ?? {};
+
+		if (session.isStreamer || session.isGuest) {
+			if (muteMap[session.user.id]) {
+				muteMap[session.user.id] = muteMap[session.user.id].filter((muteId) => muteId !== id);
+			}
+		}
+
+		await this.storage.set(StorageKeys.MuteMap, muteMap);
+
+		session.sendToChannel('update-mute-map', muteMap);
+
+		session.sendToChannel('send-notification', {
+			side: session.isStreamer ? 'host' : 'guest',
+			notification: {
+				text: `🔊 ${session.user.username} unmuted the other creator`,
+				backgroundColor: '#88000000',
+				durationMs: 2500,
+			},
+		});
+	}
 
 	private getLeaderboard = async () => {
 		const userContributions: UserScores = await this.storage.get(StorageKeys.UserContributions);
@@ -134,6 +188,14 @@ export class Battle extends Game<Env, State, Events> {
 	 */
 	private getScheduledBooster = async () => (Math.random() > 0.1 ? new DoubleScoreBooster('x2 value') : new TripleScoreBooster('x3 value'));
 
+	private getValueChallengeTargetValue = () => {
+		return this.connectedSessions.length < 10 ? 10 : Math.max(150, this.connectedSessions.length * 10 + 50);
+	};
+
+	private getGifterChallengeTargetValue = () => {
+		return Math.max(2, Math.floor(this.connectedSessions.length / 5));
+	};
+
 	private startBoosterSchedule = async (delayInMs: number) => {
 		const max = 100;
 		const min = 0;
@@ -167,7 +229,7 @@ export class Battle extends Game<Env, State, Events> {
 										{
 											title: 'speed challenge',
 											type: TargetType.score,
-											targetValue: Math.max(500, this.connectedSessions.length * 10 + 200),
+											targetValue: this.getValueChallengeTargetValue(),
 											// targetValue: 5,
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 30000),
@@ -180,7 +242,7 @@ export class Battle extends Game<Env, State, Events> {
 										{
 											title: 'gifter challenge',
 											type: TargetType.uniqueUsers,
-											targetValue: Math.max(2, Math.floor(this.connectedSessions.length / 5)),
+											targetValue: this.getGifterChallengeTargetValue(),
 											currentValue: 0,
 											endsAt: new Date(Date.now() + 40000),
 											booster: booster,
@@ -236,6 +298,10 @@ export class Battle extends Game<Env, State, Events> {
 				guest: null,
 			},
 			announcement: {
+				host: null,
+				guest: null,
+			},
+			notification: {
 				host: null,
 				guest: null,
 			},
@@ -1098,6 +1164,9 @@ export class Battle extends Game<Env, State, Events> {
 			);
 		});
 
+		this.registerEvent('mute-cohost', async (_, session, data) => this.mute(session, data));
+		this.registerEvent('unmute-cohost', async (_, session, data) => this.unmute(session, data));
+
 		this.registerEvent('accept-invite', async (game, session) => {
 			if (session.isGuest || session.isStreamer) {
 				this.startGame();
@@ -1185,7 +1254,13 @@ export class Battle extends Game<Env, State, Events> {
 			this.storage.cancelAlarm();
 			this.timerController.clear();
 
+			/// Saving the mute map, clearing the storage and setting the mute map back
+			const muteMap = structuredClone(await this.storage.get(StorageKeys.MuteMap));
+
 			this.storage.clear();
+
+			/// Setting the mute map back
+			await this.storage.set(StorageKeys.MuteMap, muteMap);
 
 			this.connectedSessions.forEach((session) => {
 				if (session.isStreamer) {
@@ -1277,6 +1352,7 @@ export class Battle extends Game<Env, State, Events> {
 		const winner = side == Side.host ? 'guest' : 'host';
 
 		await this.env.winStreaks.put(side == Side.guest ? this.guestSession!.user.id : this.hostSession!.user.id, '0');
+
 		await this.state.set('round', {
 			...(state as State['round']),
 			winner: winner,
